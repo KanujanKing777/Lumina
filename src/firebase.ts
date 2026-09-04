@@ -21,7 +21,7 @@ import {
   Firestore
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
-import { InteractionEntry } from './types';
+import { InteractionEntry, NotificationSettings, NotificationLogEntry, FolderItem, WritingGoal } from './types';
 
 // Initialize Firebase App singleton
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -164,3 +164,294 @@ export async function deleteInteraction(userId: string, interactionId: string): 
   const docRef = doc(db, 'users', userId, 'interactions', interactionId);
   await deleteDoc(docRef);
 }
+
+/**
+ * Listen to user notification settings in real-time
+ * Path: /users/{userId}/notificationSettings/default
+ */
+export function subscribeToNotificationSettings(
+  userId: string,
+  onUpdate: (settings: NotificationSettings | null) => void,
+  onError?: (err: Error) => void
+): () => void {
+  if (!userId) {
+    onUpdate(null);
+    return () => {};
+  }
+
+  const docRef = doc(db, 'users', userId, 'notificationSettings', 'default');
+  return onSnapshot(
+    docRef,
+    (docSnap) => {
+      if (docSnap.exists()) {
+        onUpdate(docSnap.data() as NotificationSettings);
+      } else {
+        onUpdate(null);
+      }
+    },
+    (error) => {
+      console.error('Notification settings subscription error:', error);
+      if (onError) onError(error);
+    }
+  );
+}
+
+/**
+ * Save or update user notification settings
+ */
+export async function saveNotificationSettings(
+  userId: string,
+  settings: Partial<NotificationSettings>
+): Promise<void> {
+  if (!userId) throw new Error('User must be authenticated to modify notification settings.');
+  const docRef = doc(db, 'users', userId, 'notificationSettings', 'default');
+  
+  const payload = sanitizePayload({
+    userId,
+    enabled: settings.enabled ?? false,
+    emailDestination: settings.emailDestination || '',
+    enabledEventTypes: settings.enabledEventTypes || ['goal_detected', 'task_detected'],
+    providerType: settings.providerType || 'email',
+    webhookUrl: settings.webhookUrl || '',
+    includeSummary: settings.includeSummary ?? true,
+    updatedAt: Date.now(),
+  });
+
+  await setDoc(docRef, payload, { merge: true });
+}
+
+/**
+ * Listen to notification logs in real-time
+ * Path: /users/{userId}/notificationLogs
+ */
+export function subscribeToNotificationLogs(
+  userId: string,
+  onUpdate: (logs: NotificationLogEntry[]) => void,
+  onError?: (err: Error) => void
+): () => void {
+  if (!userId) {
+    onUpdate([]);
+    return () => {};
+  }
+
+  const logsRef = collection(db, 'users', userId, 'notificationLogs');
+  const q = query(logsRef, orderBy('timestamp', 'desc'));
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const items: NotificationLogEntry[] = [];
+      snapshot.forEach((docSnap) => {
+        items.push({
+          id: docSnap.id,
+          ...(docSnap.data() as Omit<NotificationLogEntry, 'id'>),
+        });
+      });
+      onUpdate(items);
+    },
+    (error) => {
+      console.error('Notification logs subscription error:', error);
+      if (onError) onError(error);
+    }
+  );
+}
+
+/**
+ * Record a notification delivery log entry
+ */
+export async function saveNotificationLog(
+  userId: string,
+  logEntry: Omit<NotificationLogEntry, 'id' | 'userId'>
+): Promise<string> {
+  if (!userId) throw new Error('User must be authenticated.');
+  const logsRef = collection(db, 'users', userId, 'notificationLogs');
+
+  const payload = sanitizePayload({
+    ...logEntry,
+    userId,
+    timestamp: logEntry.timestamp || Date.now(),
+  });
+
+  const docRef = await addDoc(logsRef, payload);
+  return docRef.id;
+}
+
+/**
+ * Listen to user folders and collections in real-time
+ * Path: /users/{userId}/folders
+ */
+export function subscribeToUserFolders(
+  userId: string,
+  onUpdate: (folders: FolderItem[]) => void,
+  onError?: (err: Error) => void
+): () => void {
+  if (!userId) {
+    onUpdate([]);
+    return () => {};
+  }
+
+  const foldersRef = collection(db, 'users', userId, 'folders');
+  const q = query(foldersRef, orderBy('createdAt', 'asc'));
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const items: FolderItem[] = [];
+      snapshot.forEach((docSnap) => {
+        items.push({
+          id: docSnap.id,
+          ...(docSnap.data() as Omit<FolderItem, 'id'>),
+        });
+      });
+      onUpdate(items);
+    },
+    (error) => {
+      console.error('Folders subscription error:', error);
+      if (onError) onError(error);
+    }
+  );
+}
+
+/**
+ * Save a new user collection / folder
+ */
+export async function saveFolder(
+  userId: string,
+  folder: Omit<FolderItem, 'id' | 'userId'>
+): Promise<string> {
+  if (!userId) throw new Error('User must be authenticated to create a folder.');
+  const foldersRef = collection(db, 'users', userId, 'folders');
+
+  const payload = sanitizePayload({
+    ...folder,
+    userId,
+    createdAt: folder.createdAt || Date.now(),
+    updatedAt: Date.now(),
+  });
+
+  const docRef = await addDoc(foldersRef, payload);
+  return docRef.id;
+}
+
+/**
+ * Update an existing collection / folder
+ */
+export async function updateFolder(
+  userId: string,
+  folderId: string,
+  updates: Partial<FolderItem>
+): Promise<void> {
+  if (!userId || !folderId) throw new Error('Valid userId and folderId are required.');
+  const docRef = doc(db, 'users', userId, 'folders', folderId);
+
+  const payload = sanitizePayload({
+    ...updates,
+    updatedAt: Date.now(),
+  });
+
+  await updateDoc(docRef, payload);
+}
+
+/**
+ * Delete a collection / folder
+ * Note: Deleting a collection must not delete the journal entries inside it.
+ */
+export async function deleteFolder(
+  userId: string,
+  folderId: string
+): Promise<void> {
+  if (!userId || !folderId) throw new Error('Valid userId and folderId are required.');
+  const docRef = doc(db, 'users', userId, 'folders', folderId);
+  await deleteDoc(docRef);
+}
+
+/**
+ * Listen to user writing goals in real-time
+ * Path: /users/{userId}/goals
+ */
+export function subscribeToUserGoals(
+  userId: string,
+  onUpdate: (goals: WritingGoal[]) => void,
+  onError?: (err: Error) => void
+): () => void {
+  if (!userId) {
+    onUpdate([]);
+    return () => {};
+  }
+
+  const goalsRef = collection(db, 'users', userId, 'goals');
+  const q = query(goalsRef, orderBy('createdAt', 'asc'));
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const items: WritingGoal[] = [];
+      snapshot.forEach((docSnap) => {
+        items.push({
+          id: docSnap.id,
+          ...(docSnap.data() as Omit<WritingGoal, 'id'>),
+        });
+      });
+      onUpdate(items);
+    },
+    (error) => {
+      console.error('Goals subscription error:', error);
+      if (onError) onError(error);
+    }
+  );
+}
+
+/**
+ * Save a new user writing goal
+ */
+export async function saveGoal(
+  userId: string,
+  goal: Omit<WritingGoal, 'id' | 'userId'>
+): Promise<string> {
+  if (!userId) throw new Error('User must be authenticated to create a goal.');
+  const goalsRef = collection(db, 'users', userId, 'goals');
+
+  const payload = sanitizePayload({
+    ...goal,
+    userId,
+    createdAt: goal.createdAt || Date.now(),
+    updatedAt: Date.now(),
+  });
+
+  const docRef = await addDoc(goalsRef, payload);
+  return docRef.id;
+}
+
+/**
+ * Update an existing user writing goal
+ */
+export async function updateGoal(
+  userId: string,
+  goalId: string,
+  updates: Partial<WritingGoal>
+): Promise<void> {
+  if (!userId || !goalId) throw new Error('Valid userId and goalId are required.');
+  const docRef = doc(db, 'users', userId, 'goals', goalId);
+
+  const payload = sanitizePayload({
+    ...updates,
+    updatedAt: Date.now(),
+  });
+
+  await updateDoc(docRef, payload);
+}
+
+/**
+ * Delete a user writing goal
+ */
+export async function deleteGoal(
+  userId: string,
+  goalId: string
+): Promise<void> {
+  if (!userId || !goalId) throw new Error('Valid userId and goalId are required.');
+  const docRef = doc(db, 'users', userId, 'goals', goalId);
+  await deleteDoc(docRef);
+}
+
+
+

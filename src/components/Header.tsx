@@ -1,96 +1,114 @@
 import React from 'react';
 import { User } from 'firebase/auth';
-import { Sparkles, LogOut, ShieldCheck, Database, CheckCircle2 } from 'lucide-react';
-import { logOut } from '../firebase';
+import { Sparkles, Search, Menu } from 'lucide-react';
+import { SettingsMenu } from './SettingsMenu';
 
 interface HeaderProps {
   user: User | null;
   onOpenThreatModel: () => void;
+  onOpenNotifications?: () => void;
+  notificationsEnabled?: boolean;
   onSignIn: () => void;
   isAuthenticating?: boolean;
+  searchQuery?: string;
+  onSearchChange?: (q: string) => void;
+  onToggleMobileNav?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   user,
   onOpenThreatModel,
+  onOpenNotifications,
+  notificationsEnabled,
   onSignIn,
   isAuthenticating,
+  searchQuery = '',
+  onSearchChange,
+  onToggleMobileNav,
 }) => {
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b border-stone-200/80">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Brand & Identity */}
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-700 shadow-xs">
+    <header className="shrink-0 z-40 w-full bg-white/90 dark:bg-stone-900/90 backdrop-blur-md border-b border-stone-200/80 dark:border-stone-800 transition-colors duration-150">
+      <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3 sm:gap-6">
+        {/* Brand & Identity (With Mobile Nav Hamburger) */}
+        <div className="flex items-center gap-3 shrink-0">
+          {onToggleMobileNav && (
+            <button
+              onClick={onToggleMobileNav}
+              className="lg:hidden p-1.5 rounded-lg text-stone-600 hover:text-stone-900 dark:text-stone-300 dark:hover:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer"
+              aria-label="Toggle navigation menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          )}
+
+          <div className="w-9 h-9 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/20 dark:border-amber-500/30 flex items-center justify-center text-amber-700 dark:text-amber-400 shadow-xs shrink-0">
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-base font-semibold text-stone-900 tracking-tight">Reflections AI</h1>
-              <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-amber-100/70 text-amber-800 border border-amber-200/60 tracking-wider">
+              <h1 className="text-base font-semibold text-stone-900 dark:text-stone-100 tracking-tight whitespace-nowrap">
+                Reflections AI
+              </h1>
+              <span className="hidden md:inline-block text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-amber-100/70 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/60 tracking-wider">
                 Gemini 3.6 Flash
               </span>
             </div>
-            <p className="text-[11px] text-stone-700 hidden sm:block">Private, Isolated Firestore Journal</p>
+            <p className="text-[11px] text-stone-700 dark:text-stone-300 hidden xl:block">
+              Private, Isolated Firestore Journal
+            </p>
           </div>
         </div>
 
-        {/* Security & Action Controls */}
+        {/* Global Search Bar */}
+        {onSearchChange && (
+          <div className="flex-1 max-w-md mx-auto hidden sm:block">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-700 dark:text-stone-300" />
+              <input
+                id="header-global-search-input"
+                type="text"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Global Search (journals, reflections, moods)..."
+                className="w-full pl-9 pr-3 py-1.5 text-xs bg-stone-100/80 dark:bg-stone-800/80 border border-stone-200/80 dark:border-stone-700/80 rounded-xl placeholder:text-stone-600 dark:placeholder:text-stone-300 focus:outline-hidden focus:ring-1 focus:ring-amber-500 focus:bg-white dark:focus:bg-stone-800 text-stone-900 dark:text-stone-100 transition-all"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Profile & Settings Section */}
         <div className="flex items-center gap-2.5 sm:gap-3">
-          {/* Threat Model & Security Button */}
-          <button
-            id="threat-model-toggle-btn"
-            onClick={onOpenThreatModel}
-            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-stone-700 bg-stone-100/80 hover:bg-stone-200/70 border border-stone-200/60 transition-colors"
-            title="Inspect Agentic Threat Model & Security Posture"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="hidden md:inline">Security Posture</span>
-          </button>
-
-          {/* User Auth State */}
+          {/* Authenticated Profile Section (Unchanged presentation and functionality) */}
           {user ? (
-            <div className="flex items-center gap-3 pl-2 border-l border-stone-200">
-              <div className="flex items-center gap-2 text-left">
-                {user.photoURL ? (
-                  <img
-                    id="user-avatar-img"
-                    src={user.photoURL}
-                    alt={user.displayName || 'User'}
-                    referrerPolicy="no-referrer"
-                    className="w-8 h-8 rounded-full border border-stone-300 object-cover"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center text-xs font-bold text-stone-700">
-                    {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
-                  </div>
-                )}
-                <div className="hidden lg:block">
-                  <p className="text-xs font-medium text-stone-900 leading-none truncate max-w-[120px]">
-                    {user.displayName || 'Authenticated User'}
-                  </p>
-                  <p className="text-[10px] text-stone-700 leading-none mt-1 truncate max-w-[120px]">
-                    {user.email}
-                  </p>
+            <div className="flex items-center gap-2 text-left">
+              {user.photoURL ? (
+                <img
+                  id="user-avatar-img"
+                  src={user.photoURL}
+                  alt={user.displayName || 'User'}
+                  referrerPolicy="no-referrer"
+                  className="w-8 h-8 rounded-full border border-stone-300 dark:border-stone-700 object-cover shrink-0"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-stone-200 dark:bg-stone-800 flex items-center justify-center text-xs font-bold text-stone-700 dark:text-stone-300 shrink-0">
+                  {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
                 </div>
+              )}
+              <div className="hidden lg:block">
+                <p className="text-xs font-medium text-stone-900 dark:text-stone-100 leading-none truncate max-w-[130px]">
+                  {user.displayName || 'Authenticated User'}
+                </p>
+                <p className="text-[10px] text-stone-600 dark:text-stone-400 leading-none mt-1 truncate max-w-[130px]">
+                  {user.email}
+                </p>
               </div>
-
-              <button
-                id="sign-out-btn"
-                onClick={logOut}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-200/60 transition-colors"
-                title="Sign out of your private session"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Sign Out</span>
-              </button>
             </div>
           ) : (
             <button
               id="header-sign-in-btn"
               onClick={onSignIn}
               disabled={isAuthenticating}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-stone-900 hover:bg-stone-800 transition-all shadow-xs disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-semibold text-white bg-stone-900 dark:bg-amber-600 hover:bg-stone-800 dark:hover:bg-amber-500 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
                 <path
@@ -113,8 +131,18 @@ export const Header: React.FC<HeaderProps> = ({
               <span>{isAuthenticating ? 'Signing in...' : 'Sign in with Google'}</span>
             </button>
           )}
+
+          {/* Unified Settings Gear Icon & Menu (Positioned directly near the profile section) */}
+          <SettingsMenu
+            user={user}
+            onOpenThreatModel={onOpenThreatModel}
+            onOpenNotifications={onOpenNotifications}
+            notificationsEnabled={notificationsEnabled}
+          />
         </div>
       </div>
     </header>
   );
 };
+
+
