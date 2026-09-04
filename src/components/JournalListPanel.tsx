@@ -136,7 +136,7 @@ export const JournalListPanel: React.FC<JournalListPanelProps> = ({
         };
       case 'folders':
         return {
-          title: 'Folders & Collections',
+          title: 'Collections',
           icon: <Folder className="w-4 h-4 text-stone-600 dark:text-stone-400" />,
           count: filteredEntries.length,
         };
@@ -153,23 +153,23 @@ export const JournalListPanel: React.FC<JournalListPanelProps> = ({
   const heading = getSectionHeading();
 
   return (
-    <div className="h-full flex flex-col min-h-0 bg-stone-50/50 dark:bg-stone-900/50 border-r border-stone-200/80 dark:border-stone-800 shrink-0 select-none overflow-hidden w-80 lg:w-88 xl:w-96 transition-colors duration-150">
+    <div className="h-full flex flex-col min-h-0 bg-[#FAF9F7] dark:bg-[#141413] border-r border-stone-200/70 dark:border-stone-800/80 shrink-0 select-none overflow-hidden w-80 lg:w-84 xl:w-92 transition-colors duration-150">
       {/* Header & Filter Controls */}
-      <div className="shrink-0 p-3.5 border-b border-stone-200/80 dark:border-stone-800 space-y-2.5 bg-white/70 dark:bg-stone-900/70">
+      <div className="shrink-0 p-3.5 border-b border-stone-200/60 dark:border-stone-800/70 space-y-2.5 bg-white/60 dark:bg-stone-900/60 backdrop-blur-xs">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {heading.icon}
-            <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-100 tracking-tight">
+            <h2 className="text-xs font-semibold text-stone-900 dark:text-stone-100 tracking-tight">
               {heading.title}
             </h2>
-            <span className="text-[11px] font-mono px-1.5 py-0.2 rounded-full bg-stone-200 dark:bg-stone-800 text-stone-700 dark:text-stone-300 font-medium">
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-stone-200/70 dark:bg-stone-800 text-stone-600 dark:text-stone-400 font-medium">
               {heading.count}
             </span>
           </div>
 
           <button
             onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-            className="flex items-center gap-1 text-[11px] font-medium text-stone-700 dark:text-stone-300 hover:text-stone-900 dark:hover:text-stone-100 px-1.5 py-0.5 rounded-md hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer"
+            className="flex items-center gap-1 text-[11px] font-medium text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 px-1.5 py-0.5 rounded-md hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer"
             title={`Sort: ${sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}`}
           >
             <ArrowUpDown className="w-3 h-3" />
@@ -179,29 +179,29 @@ export const JournalListPanel: React.FC<JournalListPanelProps> = ({
 
         {/* Search input */}
         <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-stone-700 dark:text-stone-300" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500 pointer-events-none" />
           <input
             id="journal-panel-search-input"
             type="text"
             placeholder="Search entries, mood, tags..."
             value={searchFilter}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-stone-800/90 border border-stone-200 dark:border-stone-700 rounded-lg placeholder:text-stone-600 dark:placeholder:text-stone-300 focus:outline-hidden focus:ring-1 focus:ring-amber-500 focus:border-amber-500 text-stone-900 dark:text-stone-100 transition-colors"
+            className="w-full pl-8.5 pr-3 py-1.5 text-xs bg-white dark:bg-stone-800/70 border border-stone-200/80 dark:border-stone-700/80 rounded-lg placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-hidden focus:ring-1 focus:ring-amber-500/70 text-stone-900 dark:text-stone-100 transition-colors"
           />
         </div>
 
-        {/* Optional Folder quick selector if folders exist and not in specific section */}
+        {/* Optional Folder quick selector */}
         {folders.length > 0 && onSelectFolder && (
           <div className="flex items-center gap-1 text-[11px] overflow-x-auto pb-0.5 no-scrollbar">
             <button
               onClick={() => onSelectFolder('all')}
               className={`px-2 py-0.5 rounded-md font-medium whitespace-nowrap transition-colors cursor-pointer ${
                 selectedFolderId === 'all'
-                  ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
-                  : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 border border-stone-200/60 dark:border-stone-700'
+                  ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900'
+                  : 'bg-white dark:bg-stone-800/80 text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700 border border-stone-200/60 dark:border-stone-700/60'
               }`}
             >
-              All Folders
+              All
             </button>
             {folders.map((f) => (
               <button
@@ -209,8 +209,8 @@ export const JournalListPanel: React.FC<JournalListPanelProps> = ({
                 onClick={() => onSelectFolder(f.id)}
                 className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-medium whitespace-nowrap transition-colors cursor-pointer ${
                   selectedFolderId === f.id
-                    ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
-                    : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 border border-stone-200/60 dark:border-stone-700'
+                    ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900'
+                    : 'bg-white dark:bg-stone-800/80 text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700 border border-stone-200/60 dark:border-stone-700/60'
                 }`}
               >
                 <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: f.color || '#D97706' }} />
@@ -229,7 +229,7 @@ export const JournalListPanel: React.FC<JournalListPanelProps> = ({
               className={`px-2 py-0.5 rounded-md font-medium whitespace-nowrap transition-colors cursor-pointer ${
                 selectedModeFilter === mode
                   ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900'
-                  : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 border border-stone-200/60 dark:border-stone-700'
+                  : 'bg-white dark:bg-stone-800/80 text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700/70 border border-stone-200/60 dark:border-stone-700/60'
               }`}
             >
               {mode === 'all' ? 'All' : mode === 'action_plan' ? 'Action' : mode.charAt(0).toUpperCase() + mode.slice(1)}
@@ -238,23 +238,23 @@ export const JournalListPanel: React.FC<JournalListPanelProps> = ({
         </div>
       </div>
 
-      {/* Entries List (Strict Internal Scroll Container) */}
+      {/* Entries List */}
       <div 
         id="journal-entries-scroll-container"
-        className="flex-1 min-h-0 overflow-y-auto divide-y divide-stone-100 dark:divide-stone-800/80 p-2 space-y-1"
+        className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1"
       >
         {isLoading && entries.length === 0 ? (
-          <div className="p-8 text-center text-xs text-stone-700 dark:text-stone-300 space-y-2">
+          <div className="p-8 text-center text-xs text-stone-500 dark:text-stone-400 space-y-2">
             <div className="w-5 h-5 border-2 border-stone-300 dark:border-stone-700 border-t-amber-600 dark:border-t-amber-500 rounded-full animate-spin mx-auto" />
-            <p>Loading entries from isolated Firestore...</p>
+            <p>Loading entries...</p>
           </div>
         ) : filteredEntries.length === 0 ? (
-          <div className="p-8 text-center text-xs text-stone-700 dark:text-stone-300 space-y-2">
-            <BookOpen className="w-7 h-7 text-stone-300 dark:text-stone-600 mx-auto" />
-            <p className="font-medium text-stone-700 dark:text-stone-200">
+          <div className="p-8 text-center text-xs text-stone-500 dark:text-stone-400 space-y-2">
+            <BookOpen className="w-6 h-6 text-stone-300 dark:text-stone-600 mx-auto" />
+            <p className="font-medium text-stone-700 dark:text-stone-300">
               {activeSection === 'favorites' ? 'No favorites starred yet' : 'No entries found'}
             </p>
-            <p className="text-[11px] text-stone-600 dark:text-stone-300">
+            <p className="text-[11px] text-stone-400 dark:text-stone-500">
               {searchFilter
                 ? 'Try adjusting your search criteria.'
                 : activeSection === 'favorites'
@@ -274,10 +274,10 @@ export const JournalListPanel: React.FC<JournalListPanelProps> = ({
                 key={entry.id}
                 id={`journal-entry-card-${entry.id}`}
                 onClick={() => onSelectEntry(entry)}
-                className={`group relative p-3 rounded-xl cursor-pointer transition-all duration-150 border ${
+                className={`group relative p-2.5 rounded-lg cursor-pointer transition-all duration-150 border ${
                   isSelected
-                    ? 'bg-white dark:bg-stone-800/90 border-amber-300/80 dark:border-amber-500/80 shadow-xs'
-                    : 'bg-transparent border-transparent hover:bg-white/80 dark:hover:bg-stone-800/50 hover:border-stone-200 dark:hover:border-stone-700'
+                    ? 'bg-white dark:bg-stone-800 border-stone-300/90 dark:border-stone-700 shadow-2xs'
+                    : 'bg-transparent border-transparent hover:bg-white/60 dark:hover:bg-stone-800/40 hover:border-stone-200/70 dark:hover:border-stone-800'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -295,7 +295,6 @@ export const JournalListPanel: React.FC<JournalListPanelProps> = ({
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0">
-                    {/* Favorite Star Button */}
                     <button
                       type="button"
                       onClick={(e) => onToggleFavorite && onToggleFavorite(entry.id!, !!entry.isFavorite, e)}
@@ -309,35 +308,35 @@ export const JournalListPanel: React.FC<JournalListPanelProps> = ({
                       <Star className={`w-3.5 h-3.5 ${entry.isFavorite ? 'fill-amber-500' : ''}`} />
                     </button>
 
-                    <span className="text-[10px] text-stone-600 dark:text-stone-300 flex items-center gap-0.5 ml-1">
+                    <span className="text-[10px] text-stone-400 dark:text-stone-500 flex items-center gap-0.5 ml-0.5">
                       <Clock className="w-2.5 h-2.5" />
                       {formatDate(entryDate)}
                     </span>
                   </div>
                 </div>
 
-                <p className="text-[11px] text-stone-600 dark:text-stone-300 line-clamp-2 mt-1 leading-relaxed">
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 line-clamp-2 mt-1 leading-relaxed">
                   {entry.journalContent || entry.initialPrompt || (entry.messages[0] ? entry.messages[0].content : 'No content yet')}
                 </p>
 
                 {/* Footer metadata & Delete button */}
-                <div className="flex items-center justify-between pt-2 mt-1">
+                <div className="flex items-center justify-between pt-1.5 mt-1">
                   <div className="flex items-center gap-1.5 overflow-hidden flex-wrap">
                     {entry.mood && (
-                      <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200/50 dark:border-amber-800/50">
+                      <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-amber-500/10 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400">
                         {entry.mood}
                       </span>
                     )}
 
                     {mediaCount > 0 && (
-                      <span className="text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.2 rounded font-medium flex items-center gap-1">
+                      <span className="text-[10px] text-stone-500 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 px-1.5 py-0.2 rounded font-medium flex items-center gap-1">
                         <ImageIcon className="w-2.5 h-2.5" />
                         {mediaCount}
                       </span>
                     )}
 
                     {entry.status === 'draft' && (
-                      <span className="text-[9px] font-bold text-amber-700 dark:text-amber-400 uppercase">
+                      <span className="text-[9px] font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wider">
                         Draft
                       </span>
                     )}
@@ -346,7 +345,7 @@ export const JournalListPanel: React.FC<JournalListPanelProps> = ({
                   <button
                     id={`delete-entry-${entry.id}`}
                     onClick={(e) => onDeleteEntry(entry.id!, e)}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-stone-400 hover:text-red-600 dark:hover:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-950/40 transition-opacity cursor-pointer shrink-0"
+                    className="opacity-0 group-hover:opacity-100 p-1 text-stone-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-opacity cursor-pointer shrink-0"
                     title="Delete entry"
                   >
                     <Trash2 className="w-3.5 h-3.5" />

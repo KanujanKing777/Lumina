@@ -145,7 +145,7 @@ export const FoldersView: React.FC<FoldersViewProps> = ({
         <div>
           <h1 className="text-base font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
             <FolderIcon className="w-5 h-5 text-amber-600 dark:text-amber-500" />
-            Folders & Collections
+            Collections
           </h1>
           <p className="text-xs text-stone-700 dark:text-stone-300 mt-0.5">
             Organize your journal entries into custom mindful collections.

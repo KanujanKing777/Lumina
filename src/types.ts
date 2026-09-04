@@ -90,6 +90,14 @@ export interface DetectedJournalEvent {
   confidence: number;
 }
 
+export interface JournalLocation {
+  latitude: number;
+  longitude: number;
+  placeId?: string | null;
+  name?: string | null;
+  formattedAddress?: string | null;
+}
+
 export interface InteractionEntry {
   id?: string;
   userId: string;
@@ -107,6 +115,7 @@ export interface InteractionEntry {
   mood?: MoodType;
   moodIntensity?: number; // 1 to 10 scale
   emotionTags?: string[];
+  location?: JournalLocation | null;
   messages: ChatMessage[];
   summary?: string;
   keyInsights?: string[];
@@ -114,6 +123,30 @@ export interface InteractionEntry {
   detectedEvents?: DetectedJournalEvent[];
   createdAt: number;
   updatedAt: number;
+  modelUsed?: string;
+}
+
+export type WritingAssistantAction =
+  | 'improve_writing'
+  | 'fix_grammar'
+  | 'make_clearer'
+  | 'summarize'
+  | 'generate_title'
+  | 'suggest_questions'
+  | 'convert_voice'
+  | 'extract_tags'
+  | 'suggest_mood';
+
+export interface WritingAssistantSuggestion {
+  action: WritingAssistantAction;
+  suggestedText?: string;
+  suggestedTitle?: string;
+  suggestedTags?: string[];
+  suggestedMood?: MoodType;
+  suggestedMoodIntensity?: number;
+  suggestedQuestions?: string[];
+  summary?: string;
+  explanation?: string;
   modelUsed?: string;
 }
 
@@ -282,6 +315,8 @@ export interface PeriodicReflectionReport {
   entryCountAnalyzed: number;
   generatedAt: number;
   modelUsed?: string;
+  isFallback?: boolean;
+  notice?: string;
 }
 
 export interface OnThisDayMemory {

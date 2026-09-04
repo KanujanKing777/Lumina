@@ -9,12 +9,7 @@ import {
   Sparkles,
   Lightbulb,
   MessageSquare,
-  Layers,
-  CalendarDays,
-  CalendarRange,
   History,
-  Flame,
-  Target,
   BarChart2,
   Plus,
   X
@@ -60,7 +55,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         },
         {
           id: 'folders' as NavigationSection,
-          label: 'Folders / Collections',
+          label: 'Collections',
           icon: Folder,
           badge: foldersCount > 0 ? foldersCount : undefined,
         },
@@ -105,21 +100,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           icon: MessageSquare,
         },
         {
-          id: 'patterns_themes' as NavigationSection,
-          label: 'Patterns & Themes',
-          icon: Layers,
-        },
-        {
-          id: 'weekly_reflection' as NavigationSection,
-          label: 'Weekly Reflection',
-          icon: CalendarDays,
-        },
-        {
-          id: 'monthly_reflection' as NavigationSection,
-          label: 'Monthly Reflection',
-          icon: CalendarRange,
-        },
-        {
           id: 'on_this_day' as NavigationSection,
           label: 'On This Day',
           icon: History,
@@ -130,16 +110,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
       label: 'PROGRESS',
       items: [
         {
-          id: 'streaks' as NavigationSection,
-          label: 'Streaks',
-          icon: Flame,
-        },
-        {
-          id: 'writing_goals' as NavigationSection,
-          label: 'Writing Goals',
-          icon: Target,
-        },
-        {
           id: 'statistics' as NavigationSection,
           label: 'Statistics',
           icon: BarChart2,
@@ -149,18 +119,18 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   ];
 
   const renderNavContent = () => (
-    <div className="h-full flex flex-col min-h-0 bg-stone-50/80 dark:bg-stone-900/80 border-r border-stone-200/80 dark:border-stone-800 transition-colors duration-150 select-none">
+    <div className="h-full flex flex-col min-h-0 bg-[#F8F8F6] dark:bg-[#161615] border-r border-stone-200/70 dark:border-stone-800/80 transition-colors duration-150 select-none">
       {/* Top CTA: + New Journal Entry */}
-      <div className="p-3.5 border-b border-stone-200/70 dark:border-stone-800 shrink-0">
+      <div className="p-3 border-b border-stone-200/60 dark:border-stone-800/70 shrink-0">
         <button
           id="new-journal-entry-nav-btn"
           onClick={() => {
             onNewEntry();
             if (onCloseMobile) onCloseMobile();
           }}
-          className="w-full flex items-center justify-center gap-2 py-2.5 px-3.5 rounded-xl text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 active:scale-[0.98] transition-all shadow-xs cursor-pointer"
+          className="w-full h-9 flex items-center justify-center gap-2 px-3 rounded-lg text-xs font-medium text-white bg-stone-900 hover:bg-stone-800 dark:bg-amber-600 dark:hover:bg-amber-500 active:scale-[0.99] transition-all shadow-2xs cursor-pointer"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5" />
           <span>New Journal Entry</span>
         </button>
       </div>
@@ -168,12 +138,12 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
       {/* Navigation Sections (Scrollable within container) */}
       <nav 
         id="main-navigation-sidebar"
-        className="flex-1 min-h-0 overflow-y-auto p-3 space-y-5"
+        className="flex-1 min-h-0 overflow-y-auto px-2.5 py-3 space-y-4"
         aria-label="Application Sections"
       >
         {navGroups.map((group) => (
-          <div key={group.label} className="space-y-1">
-            <h3 className="px-2.5 text-[10px] font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300">
+          <div key={group.label} className="space-y-0.5">
+            <h3 className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
               {group.label}
             </h3>
             <div className="space-y-0.5">
@@ -189,18 +159,18 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                       onSelectSection(item.id);
                       if (onCloseMobile) onCloseMobile();
                     }}
-                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all text-left cursor-pointer ${
+                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer ${
                       isActive
-                        ? 'bg-amber-100/70 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 font-semibold'
-                        : 'text-stone-700 dark:text-stone-300 hover:bg-stone-200/60 dark:hover:bg-stone-800/70 hover:text-stone-900 dark:hover:text-stone-100'
+                        ? 'bg-stone-200/70 dark:bg-stone-800/80 text-stone-900 dark:text-stone-100 font-medium'
+                        : 'text-stone-600 dark:text-stone-400 hover:bg-stone-200/40 dark:hover:bg-stone-800/50 hover:text-stone-900 dark:hover:text-stone-200'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 truncate">
                       <IconComponent
                         className={`w-3.5 h-3.5 shrink-0 ${
                           isActive
-                            ? 'text-amber-700 dark:text-amber-400'
-                            : 'text-stone-700 dark:text-stone-300'
+                            ? 'text-stone-900 dark:text-amber-400'
+                            : 'text-stone-400 dark:text-stone-500'
                         }`}
                       />
                       <span className="truncate">{item.label}</span>
@@ -210,8 +180,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                       <span
                         className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-medium ${
                           isActive
-                            ? 'bg-amber-200/80 dark:bg-amber-900/80 text-amber-900 dark:text-amber-200'
-                            : 'bg-stone-200 dark:bg-stone-800 text-stone-700 dark:text-stone-300'
+                            ? 'bg-stone-300/80 dark:bg-stone-700/80 text-stone-900 dark:text-stone-200'
+                            : 'bg-stone-200/60 dark:bg-stone-800 text-stone-500 dark:text-stone-400'
                         }`}
                       >
                         {item.badge}
@@ -226,7 +196,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
       </nav>
 
       {/* Subtle Bottom Information */}
-      <div className="p-3 border-t border-stone-200/70 dark:border-stone-800 shrink-0 text-[11px] text-stone-700 dark:text-stone-300 flex items-center justify-between">
+      <div className="p-3 border-t border-stone-200/60 dark:border-stone-800/70 shrink-0 text-[10px] text-stone-400 dark:text-stone-500 flex items-center justify-between">
         <span className="font-mono">v1.2</span>
         <span>Isolated Firestore</span>
       </div>

@@ -35,13 +35,16 @@ import {
   ReflectionMode, 
   MediaAttachment, 
   MoodType, 
-  JournalStatus 
+  JournalStatus,
+  JournalLocation
 } from '../types';
 import { useVoiceDictation } from '../hooks/useVoiceDictation';
 import { RichTextToolbar } from './RichTextToolbar';
 import { MoodSelector } from './MoodSelector';
 import { MediaManager } from './MediaManager';
 import { DeleteConfirmationModal } from './DeleteConfirmationModal';
+import { AIAssistancePanel } from './AIAssistancePanel';
+import { LocationPicker } from './LocationPicker';
 
 interface ConversationViewProps {
   entry: InteractionEntry | null;
@@ -112,6 +115,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
   const [emotionTags, setEmotionTags] = useState<string[]>(entry?.emotionTags || []);
   const [mediaAttachments, setMediaAttachments] = useState<MediaAttachment[]>(entry?.media || []);
   const [journalDate, setJournalDate] = useState<number>(entry?.journalDate || entry?.createdAt || Date.now());
+  const [entryLocation, setEntryLocation] = useState<JournalLocation | null>(entry?.location || null);
   
   // UI & Mode States
   const [activeMode, setActiveMode] = useState<ReflectionMode>(entry ? entry.mode : 'reflect');
@@ -144,6 +148,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
       setEmotionTags(entry.emotionTags || []);
       setMediaAttachments(entry.media || []);
       setJournalDate(entry.journalDate || entry.createdAt || Date.now());
+      setEntryLocation(entry.location || null);
       setActiveMode(entry.mode || 'reflect');
     } else {
       setTitleDraft('New Journal Entry');
@@ -153,6 +158,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
       setEmotionTags([]);
       setMediaAttachments([]);
       setJournalDate(Date.now());
+      setEntryLocation(null);
       setActiveMode('reflect');
     }
     isInitialMountRef.current = true;
@@ -204,6 +210,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
         emotionTags,
         mediaAttachments,
         journalDate,
+        entryLocation,
       });
       return;
     }
@@ -216,6 +223,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
       emotionTags,
       mediaAttachments,
       journalDate,
+      entryLocation,
     });
 
     if (currentStateStr === lastSavedStateRef.current) {
@@ -237,6 +245,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
             emotionTags,
             media: mediaAttachments,
             journalDate,
+            location: entryLocation,
             status: 'draft',
           });
           lastSavedStateRef.current = currentStateStr;
@@ -259,9 +268,45 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
     emotionTags,
     mediaAttachments,
     journalDate,
+    entryLocation,
     entry?.id,
     onUpdateEntry
   ]);
+
+  // AI Assistant Callbacks (Preview / Accept / Reject pipeline)
+  const handleAcceptText = (newText: string, mode: 'replace' | 'append') => {
+    if (mode === 'replace') {
+      setJournalContent(newText);
+    } else {
+      setJournalContent((prev) => (prev.trim() ? `${prev}\n\n${newText}` : newText));
+    }
+  };
+
+  const handleAcceptTitle = (newTitle: string) => {
+    setTitleDraft(newTitle);
+  };
+
+  const handleAcceptTags = (newTags: string[]) => {
+    setEmotionTags((prev) => {
+      const set = new Set([...prev, ...newTags]);
+      return Array.from(set);
+    });
+  };
+
+  const handleAcceptMood = (mood: MoodType, intensity: number) => {
+    setSelectedMood(mood);
+    setMoodIntensity(intensity);
+  };
+
+  const handleAcceptSummary = async (summaryText: string) => {
+    if (entry?.id) {
+      await onUpdateEntry({ summary: summaryText });
+    }
+  };
+
+  const handleInsertPrompt = (promptMarkdown: string) => {
+    setJournalContent((prev) => (prev.trim() ? `${prev}\n\n${promptMarkdown}` : promptMarkdown));
+  };
 
   // Insert markdown at textarea cursor
   const handleInsertMarkdown = (prefix: string, suffix = '', defaultPlaceholder = '') => {
@@ -298,6 +343,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
         emotionTags,
         media: mediaAttachments,
         journalDate,
+        location: entryLocation,
         status: 'saved',
       });
       lastSavedStateRef.current = JSON.stringify({
@@ -308,6 +354,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
         emotionTags,
         mediaAttachments,
         journalDate,
+        entryLocation,
       });
     } catch (err) {
       console.error('Explicit save failed:', err);
@@ -475,6 +522,12 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Location Picker */}
+            <LocationPicker
+              location={entryLocation}
+              onUpdateLocation={setEntryLocation}
+            />
           </div>
         </div>
 
@@ -571,11 +624,27 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
       </div>
 
       {/* 2. Scrollable Journal & Chat Body */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 space-y-5">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-5">
+        <div className="max-w-4xl mx-auto space-y-5">
         
         {/* Module A: Rich Text Journal Workspace */}
-        <div className="rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 shadow-2xs overflow-hidden">
+        <div className="rounded-xl border border-stone-200/80 dark:border-stone-800 bg-white dark:bg-[#181817] shadow-2xs overflow-hidden">
           
+          {/* AI Writing Assistant Panel (Contextual to current entry, Preview/Accept/Reject Workflow) */}
+          <AIAssistancePanel
+            journalContent={journalContent}
+            currentTitle={titleDraft}
+            voiceTranscript={interimTranscript}
+            currentMood={selectedMood}
+            currentTags={emotionTags}
+            onAcceptText={handleAcceptText}
+            onAcceptTitle={handleAcceptTitle}
+            onAcceptTags={handleAcceptTags}
+            onAcceptMood={handleAcceptMood}
+            onAcceptSummary={handleAcceptSummary}
+            onInsertPrompt={handleInsertPrompt}
+          />
+
           {/* Formatting Toolbar & View Mode Toggle */}
           <RichTextToolbar
             textareaRef={journalTextareaRef}
@@ -585,47 +654,47 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
           />
 
           {/* Editor Area */}
-          <div className="p-4 bg-stone-50/30 dark:bg-stone-900/30">
+          <div className="p-5 sm:p-7 bg-white dark:bg-[#181817]">
             {viewMode === 'edit' && (
               <textarea
                 ref={journalTextareaRef}
-                rows={6}
+                rows={10}
                 value={journalContent}
                 onChange={(e) => setJournalContent(e.target.value)}
-                placeholder="Write your journal entry here... Use the toolbar above for formatting (Bold, Italic, Headings, Lists, Checklists, Quotes)."
-                className="w-full bg-transparent resize-y min-h-[140px] text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 focus:outline-hidden leading-relaxed font-sans"
+                placeholder="What is on your mind today? Write your thoughts, reflections, or experiences freely..."
+                className="w-full bg-transparent resize-y min-h-[260px] text-[15px] sm:text-base text-stone-800 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-600 focus:outline-hidden leading-[1.75] font-sans"
               />
             )}
 
             {viewMode === 'preview' && (
-              <div className="min-h-[140px] text-sm leading-relaxed p-1 markdown-preview">
+              <div className="min-h-[260px] text-[15px] sm:text-base leading-[1.75] p-1 markdown-preview">
                 {journalContent.trim() ? (
                   <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                     {journalContent}
                   </ReactMarkdown>
                 ) : (
-                  <p className="text-stone-400 italic">No text written yet. Switch to "Write" mode to begin your journal entry.</p>
+                  <p className="text-stone-400 dark:text-stone-500 italic">No text written yet. Switch to "Write" mode to begin your journal entry.</p>
                 )}
               </div>
             )}
 
             {viewMode === 'split' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <textarea
                   ref={journalTextareaRef}
-                  rows={6}
+                  rows={10}
                   value={journalContent}
                   onChange={(e) => setJournalContent(e.target.value)}
                   placeholder="Write your journal entry..."
-                  className="w-full bg-transparent resize-none min-h-[140px] text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 focus:outline-hidden leading-relaxed font-sans border-b md:border-b-0 md:border-r border-stone-200 dark:border-stone-800 pb-3 md:pb-0 md:pr-3"
+                  className="w-full bg-transparent resize-none min-h-[260px] text-[15px] text-stone-800 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-600 focus:outline-hidden leading-[1.75] font-sans border-b md:border-b-0 md:border-r border-stone-200 dark:border-stone-800 pb-4 md:pb-0 md:pr-4"
                 />
-                <div className="min-h-[140px] text-sm leading-relaxed overflow-y-auto max-h-60 p-1 markdown-preview">
+                <div className="min-h-[260px] text-[15px] leading-[1.75] overflow-y-auto max-h-96 p-1 markdown-preview">
                   {journalContent.trim() ? (
                     <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                       {journalContent}
                     </ReactMarkdown>
                   ) : (
-                    <p className="text-stone-400 italic text-xs">Preview will appear here as you type.</p>
+                    <p className="text-stone-400 dark:text-stone-500 italic text-xs">Preview will appear here as you type.</p>
                   )}
                 </div>
               </div>
@@ -635,17 +704,17 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
         </div>
 
         {/* Module B: Mood & Emotion Tracking Section (Collapsible) */}
-        <div className="rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 shadow-2xs overflow-hidden">
+        <div className="rounded-xl border border-stone-200/80 dark:border-stone-800 bg-white dark:bg-[#181817] shadow-2xs overflow-hidden">
           <button
             type="button"
             onClick={() => setIsMoodOpen(!isMoodOpen)}
-            className="w-full px-4 py-3 bg-stone-50/80 dark:bg-stone-800/60 flex items-center justify-between text-xs font-semibold text-stone-800 dark:text-stone-200 border-b border-stone-200/80 dark:border-stone-800 cursor-pointer"
+            className="w-full px-4 py-2.5 bg-stone-50/60 dark:bg-stone-900/60 hover:bg-stone-100/50 dark:hover:bg-stone-800/40 transition-colors flex items-center justify-between text-xs font-medium text-stone-800 dark:text-stone-200 border-b border-stone-200/70 dark:border-stone-800/70 cursor-pointer"
           >
             <div className="flex items-center gap-2">
               <Smile className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               <span>Mood & Emotion Tracker</span>
               {selectedMood && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold uppercase">
+                <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/10 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 font-semibold uppercase">
                   {selectedMood} ({moodIntensity}/10)
                 </span>
               )}
@@ -654,7 +723,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
           </button>
 
           {isMoodOpen && (
-            <div className="p-4">
+            <div className="p-4 sm:p-5">
               <MoodSelector
                 selectedMood={selectedMood}
                 moodIntensity={moodIntensity}
@@ -669,17 +738,17 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
         </div>
 
         {/* Module C: Photos & Media Section (Collapsible) */}
-        <div className="rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 shadow-2xs overflow-hidden">
+        <div className="rounded-xl border border-stone-200/80 dark:border-stone-800 bg-white dark:bg-[#181817] shadow-2xs overflow-hidden">
           <button
             type="button"
             onClick={() => setIsMediaOpen(!isMediaOpen)}
-            className="w-full px-4 py-3 bg-stone-50/80 dark:bg-stone-800/60 flex items-center justify-between text-xs font-semibold text-stone-800 dark:text-stone-200 border-b border-stone-200/80 dark:border-stone-800 cursor-pointer"
+            className="w-full px-4 py-2.5 bg-stone-50/60 dark:bg-stone-900/60 hover:bg-stone-100/50 dark:hover:bg-stone-800/40 transition-colors flex items-center justify-between text-xs font-medium text-stone-800 dark:text-stone-200 border-b border-stone-200/70 dark:border-stone-800/70 cursor-pointer"
           >
             <div className="flex items-center gap-2">
-              <ImageIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              <span>Photos, Videos, Audio Memos & Mindful Sketches</span>
+              <ImageIcon className="w-4 h-4 text-stone-500 dark:text-stone-400" />
+              <span>Photos, Audio Memos & Sketches</span>
               {mediaAttachments.length > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 font-bold">
+                <span className="px-2 py-0.5 rounded-full text-[10px] bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 font-semibold">
                   {mediaAttachments.length} attached
                 </span>
               )}
@@ -688,7 +757,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
           </button>
 
           {isMediaOpen && (
-            <div className="p-4">
+            <div className="p-4 sm:p-5">
               <MediaManager
                 media={mediaAttachments}
                 onAddMedia={(item) => setMediaAttachments((prev) => [...prev, item])}
@@ -859,6 +928,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
           <div ref={messagesEndRef} />
         </div>
 
+        </div>
       </div>
 
       {/* 3. Input Composer Footer (Fixed at bottom) */}

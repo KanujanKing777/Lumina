@@ -279,4 +279,22 @@ Firestore Tenant Isolation (/users/{uid}/interactions/{id})
 | **JM-19** | **Dark Mode Consistency** | Toggle between light and dark themes. | All new components (MoodSelector, MediaManager, DrawingModal, DeleteModal, RichTextToolbar) adapt seamlessly with high-contrast warm stone neutrals. |
 | **JM-20** | **Non-Diagnostic Disclaimer** | Inspect Mood Tracker. | Displays clear ethical disclaimer that mood tracking is for personal reflection only and does not constitute psychological diagnosis. |
 
+---
+
+### Reflect Section & AI Synthesis Test Suite (10 Functional Scenarios)
+
+| Test Case | Feature Area | Scenario / Interaction | Expected Behavior | Verification Step |
+| :--- | :--- | :--- | :--- | :--- |
+| **RF-01** | **Daily Prompts Exploration** | Navigate to `Reflect > Daily Prompts` in navigation. | Grid of diverse, curated daily prompts renders categorized by theme (Gratitude, Mindfulness, Growth, Presence, Challenges, Creativity, Relationships). |
+| **RF-02** | **Daily Prompt Direct Reflection** | Click "Reflect on this" on any prompt card (e.g. "What made you feel genuinely alive today?"). | Transitions directly into the journal editor with the selected prompt seeded in the title/prompt banner ready for writing. |
+| **RF-03** | **Custom Reflection Seed** | Type a personalized topic into the prompt idea box (e.g. "Career transition thoughts") and click "Start Journal". | Creates new journal entry titled with the custom reflection topic. |
+| **RF-04** | **Periodic Reflection Timeframes** | Switch between "Past 7 Days", "This Month", and "All Entries" in `AI Insights`. | Analysis scope updates instantly, triggering time-scoped reflection report aggregation. |
+| **RF-05** | **Recurring Themes & Evolution** | Review "Recurring Themes" section in AI Insights. | Displays identified recurring life themes with frequency badges, description, and narrative of how each theme evolved over time. |
+| **RF-06** | **Patterns in Writing Analysis** | Review "Patterns in Writing" card in AI Insights. | Displays gentle non-diagnostic observations on writing rhythms (time of day), emotional tone shifts, and stylistic voice growth. |
+| **RF-07** | **Goal Progress Tracking** | Review "Goal Progress & Intentions" section in AI Insights. | Extracts documented goals categorized by state (`in_progress`, `accomplished`, `exploring`) with contextual momentum observations. |
+| **RF-08** | **"On This Day" Memories** | Open `Reflect > On This Day` tab. | Scans journal history for reflections authored on the exact calendar day in previous months or years, with time-ago badges and full entry viewer. |
+| **RF-09** | **Talk to My Journal Vault Chat** | Open `Reflect > Talk to My Journal`, type "What did I write about my morning routine?", and press Send. | Queries user's private journal vault with grounded citations of relevant entry dates and titles without hallucinations. |
+| **RF-10** | **Zero-Disruption Fallback Resilience** | Simulate depleted Gemini credits or network disruption during reflection generation. | Application halts redundant external calls early and serves high-integrity local heuristic synthesis, displaying transparent notice while never failing or erasing user entries. |
+
+
 

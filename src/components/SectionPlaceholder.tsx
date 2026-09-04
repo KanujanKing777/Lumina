@@ -27,6 +27,7 @@ import { SearchView } from './SearchView';
 import { FoldersView } from './FoldersView';
 import { ProgressView } from './ProgressView';
 import { ReflectView } from './ReflectView';
+import { TalkToJournalWorkspace } from './TalkToJournalWorkspace';
 
 interface SectionPlaceholderProps {
   section: NavigationSection;
@@ -63,11 +64,22 @@ export const SectionPlaceholder: React.FC<SectionPlaceholderProps> = ({
   onSelectEntry,
   searchQuery = '',
 }) => {
-  // 1. REFLECT SUITE (Daily Prompts, AI Insights, Talk to My Journal, Patterns & Themes, Weekly/Monthly Reflection, On This Day)
+  // 1. DEDICATED TALK TO MY JOURNAL WORKSPACE
+  if (section === 'talk_to_journal') {
+    return (
+      <TalkToJournalWorkspace
+        entries={entries}
+        onSelectEntry={onSelectEntry}
+        onNewEntryWithPrompt={onNewEntryWithPrompt}
+        onNewEntry={onNewEntry}
+      />
+    );
+  }
+
+  // 2. REFLECT SUITE (Daily Prompts, AI Insights, Patterns & Themes, Weekly/Monthly Reflection, On This Day)
   if ([
     'daily_prompts',
     'ai_insights',
-    'talk_to_journal',
     'patterns_themes',
     'weekly_reflection',
     'monthly_reflection',

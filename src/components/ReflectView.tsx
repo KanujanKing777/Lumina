@@ -374,7 +374,7 @@ export const ReflectView: React.FC<ReflectViewProps> = ({
         <div className="flex items-start gap-2.5 p-3 rounded-xl bg-stone-50 dark:bg-stone-800/40 border border-stone-200/70 dark:border-stone-800 text-[11px] text-stone-600 dark:text-stone-400 leading-relaxed">
           <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <span className="font-semibold text-stone-800 dark:text-stone-200">Private, Grounded Reflection:</span> AI insights are generated exclusively from your authorized entries using server-side Gemini 3.6 Flash. Observations reflect gentle writing patterns and are not psychological or clinical diagnoses.
+            <span className="font-semibold text-stone-800 dark:text-stone-200">Private, Grounded Reflection:</span> AI insights are generated exclusively from your authorized entries using server-side Gemini Flash. Observations reflect gentle writing patterns and are not psychological or clinical diagnoses.
           </div>
         </div>
 
@@ -414,6 +414,16 @@ export const ReflectView: React.FC<ReflectViewProps> = ({
         {/* Report Content */}
         {!isLoadingReflection && !reflectionError && reflectionReport && (
           <div className="space-y-6">
+            {reflectionReport.notice && (
+              <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 text-xs text-amber-900 dark:text-amber-200">
+                <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <span className="font-semibold">Local Journaling Engine: </span>
+                  {reflectionReport.notice}
+                </div>
+              </div>
+            )}
+
             {/* 1. Executive Summary Card */}
             <div className="p-6 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 space-y-3 shadow-2xs">
               <div className="flex items-center justify-between">

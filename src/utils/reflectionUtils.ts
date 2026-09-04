@@ -252,34 +252,102 @@ export async function fetchPeriodicReflection(
   return json.data;
 }
 
+export interface JournalVaultResponse {
+  reply: string;
+  modelUsed?: string;
+}
+
 /**
  * Call Server-Side Talk to My Journal API
+ * Handles 429 (rate-limit), 500/503 (service disruption), 404, and network failure
  */
 export async function askJournalVault(
   query: string,
   history: Array<{ role: 'user' | 'model'; content: string }>,
   entries: InteractionEntry[]
 ): Promise<string> {
-  const response = await fetch('/api/gemini/talk-to-journal', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      query,
-      history,
-      entries: entries.map((e) => ({
-        title: e.title,
-        journalContent: e.journalContent,
-        initialPrompt: e.initialPrompt,
-        mood: e.mood,
-        journalDate: e.journalDate || e.createdAt,
-      })),
-    }),
-  });
+  const result = await askJournalVaultDetailed(query, history, entries);
+  return result.reply;
+}
 
-  const json = await response.json();
-  if (!response.ok || !json.success) {
-    throw new Error(json.error || 'Failed to query journal vault.');
+/**
+ * Detailed version returning both reply and model metadata
+ */
+export async function askJournalVaultDetailed(
+  query: string,
+  history: Array<{ role: 'user' | 'model'; content: string }>,
+  entries: InteractionEntry[]
+): Promise<JournalVaultResponse> {
+  let response: Response;
+
+  try {
+    response = await fetch('/api/gemini/talk-to-journal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: query.trim(),
+        history,
+        entries: entries.map((e) => ({
+          title: e.title,
+          journalContent: e.journalContent,
+          initialPrompt: e.initialPrompt,
+          mood: e.mood,
+          emotionTags: e.emotionTags,
+          journalDate: e.journalDate || e.createdAt,
+        })),
+      }),
+    });
+  } catch (networkErr: any) {
+    throw new Error(
+      networkErr.message?.includes('Failed to fetch')
+        ? 'Network connection issue. Please check your internet connection and try again.'
+        : `Connection failed: ${networkErr.message || 'Unknown network error'}`
+    );
   }
 
-  return json.reply;
+  // Handle distinct HTTP status codes
+  if (response.status === 429) {
+    // Attempt to extract response if JSON available, or throw rate limit error
+    try {
+      const json = await response.json();
+      if (json.reply) return { reply: json.reply, modelUsed: json.modelUsed || 'local-fallback' };
+      throw new Error(json.error || 'Rate limit reached. Please wait a moment before asking another question.');
+    } catch {
+      throw new Error('Too many requests. Please pause for a moment before inquiring again.');
+    }
+  }
+
+  if (response.status === 503 || response.status === 500) {
+    try {
+      const json = await response.json();
+      if (json.reply) return { reply: json.reply, modelUsed: json.modelUsed || 'local-fallback' };
+      throw new Error(json.error || 'The journal companion service is temporarily unavailable. Please retry shortly.');
+    } catch {
+      throw new Error('The AI reflection service experienced a temporary disruption. Please click Retry.');
+    }
+  }
+
+  if (response.status === 404) {
+    throw new Error('Journal companion service endpoint was not found.');
+  }
+
+  let json: any;
+  try {
+    json = await response.json();
+  } catch {
+    throw new Error('Received an unreadable response from the journal vault server.');
+  }
+
+  if (!response.ok || !json.success) {
+    throw new Error(json?.error || 'Failed to query journal vault.');
+  }
+
+  if (!json.reply || typeof json.reply !== 'string' || !json.reply.trim()) {
+    throw new Error('The companion generated an empty response. Please try rephrasing your question.');
+  }
+
+  return {
+    reply: json.reply,
+    modelUsed: json.modelUsed,
+  };
 }
