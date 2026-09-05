@@ -20,7 +20,7 @@ import {
   Star,
   Folder
 } from 'lucide-react';
-import { NavigationSection, InteractionEntry, FolderItem, WritingGoal } from '../types';
+import { NavigationSection, InteractionEntry, FolderItem, WritingGoal, FutureMeMessage } from '../types';
 import { CalendarView } from './CalendarView';
 import { TimelineView } from './TimelineView';
 import { SearchView } from './SearchView';
@@ -28,18 +28,24 @@ import { FoldersView } from './FoldersView';
 import { ProgressView } from './ProgressView';
 import { ReflectView } from './ReflectView';
 import { TalkToJournalWorkspace } from './TalkToJournalWorkspace';
+import { FutureMeInbox } from './FutureMeInbox';
 
 interface SectionPlaceholderProps {
   section: NavigationSection;
   entries: InteractionEntry[];
   folders?: FolderItem[];
   goals?: WritingGoal[];
+  futureMeMessages?: FutureMeMessage[];
   onCreateFolder?: (name: string, color?: string) => Promise<void>;
   onRenameFolder?: (folderId: string, newName: string) => Promise<void>;
   onDeleteFolder?: (folderId: string) => Promise<void>;
   onCreateGoal?: (goal: Omit<WritingGoal, 'id' | 'userId' | 'createdAt'>) => Promise<void>;
   onToggleGoal?: (goalId: string, currentActive: boolean) => Promise<void>;
   onDeleteGoal?: (goalId: string) => Promise<void>;
+  onUpdateFutureMe?: (messageId: string, updates: Partial<FutureMeMessage>) => Promise<void>;
+  onDeleteFutureMe?: (messageId: string) => Promise<void>;
+  onOpenFutureMe?: (messageId: string) => Promise<void>;
+  onSaveFutureMeReflection?: (messageId: string, reflection: string, modelUsed: string) => Promise<void>;
   onNewEntryWithPrompt?: (prompt: string, title?: string) => void;
   onNewEntry: () => void;
   onNewEntryInFolder?: (folderId: string) => void;
@@ -52,18 +58,39 @@ export const SectionPlaceholder: React.FC<SectionPlaceholderProps> = ({
   entries,
   folders = [],
   goals = [],
+  futureMeMessages = [],
   onCreateFolder,
   onRenameFolder,
   onDeleteFolder,
   onCreateGoal,
   onToggleGoal,
   onDeleteGoal,
+  onUpdateFutureMe,
+  onDeleteFutureMe,
+  onOpenFutureMe,
+  onSaveFutureMeReflection,
   onNewEntryWithPrompt,
   onNewEntry,
   onNewEntryInFolder,
   onSelectEntry,
   searchQuery = '',
 }) => {
+  // 0. DEDICATED FUTURE ME INBOX
+  if (section === 'future_me') {
+    return (
+      <FutureMeInbox
+        messages={futureMeMessages}
+        entries={entries}
+        onNewEntry={onNewEntry}
+        onSelectEntry={onSelectEntry}
+        onUpdateMessage={onUpdateFutureMe || (async () => {})}
+        onDeleteMessage={onDeleteFutureMe || (async () => {})}
+        onOpenMessage={onOpenFutureMe || (async () => {})}
+        onSaveReflection={onSaveFutureMeReflection || (async () => {})}
+      />
+    );
+  }
+
   // 1. DEDICATED TALK TO MY JOURNAL WORKSPACE
   if (section === 'talk_to_journal') {
     return (

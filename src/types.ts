@@ -50,13 +50,16 @@ export type NotificationEventType =
   | 'reminder_detected'
   | 'important_event_detected'
   | 'achievement_detected'
-  | 'custom_event';
+  | 'custom_event'
+  | 'future_me_scheduled'
+  | 'future_me_delivered';
 
 export type NavigationSection =
   // JOURNAL
   | 'all'
   | 'favorites'
   | 'folders'
+  | 'future_me'
   // EXPLORE
   | 'calendar'
   | 'timeline'
@@ -327,5 +330,38 @@ export interface OnThisDayMemory {
   milestoneType: 'year_ago' | 'month_ago' | 'week_ago' | 'exact_date';
   formattedDate: string;
 }
+
+export type FutureMeStatus = 'scheduled' | 'delivered' | 'cancelled' | 'failed';
+
+export type FutureMePreset = '1_week' | '1_month' | '3_months' | '6_months' | '1_year' | 'custom';
+
+export interface FutureMeEntrySnapshot {
+  title: string;
+  journalContent: string;
+  mood?: MoodType;
+  moodIntensity?: number;
+  emotionTags?: string[];
+  journalDate?: number;
+}
+
+export interface FutureMeMessage {
+  id?: string;
+  userId: string;
+  sourceEntryId?: string;
+  title: string;
+  message?: string; // Optional personal note/message to future self
+  optionalFutureQuestion?: string; // Optional question for future self
+  scheduledFor: number; // Delivery timestamp (ms)
+  createdAt: number;
+  updatedAt?: number;
+  deliveredAt?: number | null;
+  openedAt?: number | null; // Timestamp when user breaks seal/opens message
+  status: FutureMeStatus;
+  notificationEnabled?: boolean;
+  snapshot: FutureMeEntrySnapshot; // Preserves historical integrity if source entry changes or is deleted
+  reflectionResult?: string; // Cached AI reflection from "Reflect on the Journey"
+  reflectionModelUsed?: string;
+}
+
 
 

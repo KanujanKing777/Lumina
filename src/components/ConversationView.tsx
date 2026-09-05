@@ -27,7 +27,8 @@ import {
   ChevronUp,
   Clock,
   Star,
-  PanelRight
+  PanelRight,
+  Hourglass
 } from 'lucide-react';
 import { 
   InteractionEntry, 
@@ -36,7 +37,8 @@ import {
   MediaAttachment, 
   MoodType, 
   JournalStatus,
-  JournalLocation
+  JournalLocation,
+  FutureMeEntrySnapshot
 } from '../types';
 import { useVoiceDictation } from '../hooks/useVoiceDictation';
 import { RichTextToolbar } from './RichTextToolbar';
@@ -45,6 +47,7 @@ import { MediaManager } from './MediaManager';
 import { DeleteConfirmationModal } from './DeleteConfirmationModal';
 import { AIAssistancePanel } from './AIAssistancePanel';
 import { LocationPicker } from './LocationPicker';
+import { SendToFutureMeModal } from './SendToFutureMeModal';
 
 interface ConversationViewProps {
   entry: InteractionEntry | null;
@@ -62,6 +65,13 @@ interface ConversationViewProps {
   onToggleRightPanel?: () => void;
   isRightPanelOpen?: boolean;
   onToggleFavorite?: (id: string, currentFav: boolean) => void;
+  onScheduleFutureMe?: (data: {
+    scheduledFor: number;
+    message: string;
+    optionalFutureQuestion: string;
+    notificationEnabled: boolean;
+    snapshot: FutureMeEntrySnapshot;
+  }) => Promise<void>;
 }
 
 const markdownComponents = {
@@ -106,6 +116,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
   onToggleRightPanel,
   isRightPanelOpen,
   onToggleFavorite,
+  onScheduleFutureMe,
 }) => {
   // Local Form & Content States
   const [titleDraft, setTitleDraft] = useState(entry?.title || 'New Journal Entry');
@@ -127,6 +138,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
   const [isMediaOpen, setIsMediaOpen] = useState(true);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isFutureMeModalOpen, setIsFutureMeModalOpen] = useState(false);
   const [copiedMsgIdx, setCopiedMsgIdx] = useState<number | null>(null);
 
   // Autosave tracking ref
@@ -578,6 +590,19 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
               aria-label="Toggle favorite"
             >
               <Star className={`w-4 h-4 ${entry.isFavorite ? 'fill-amber-500' : ''}`} />
+            </button>
+          )}
+
+          {/* Send to Future Me (Time capsule) */}
+          {onScheduleFutureMe && (
+            <button
+              type="button"
+              onClick={() => setIsFutureMeModalOpen(true)}
+              className="p-1.5 rounded-lg text-stone-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors cursor-pointer"
+              title="Send to Future Me (Time Capsule)"
+              aria-label="Send to Future Me"
+            >
+              <Hourglass className="w-4 h-4" />
             </button>
           )}
 
@@ -1125,6 +1150,18 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
         onConfirm={handleConfirmDelete}
         isDeleting={isDeleting}
       />
+
+      {/* Send to Future Me Modal */}
+      {onScheduleFutureMe && (
+        <SendToFutureMeModal
+          isOpen={isFutureMeModalOpen}
+          onClose={() => setIsFutureMeModalOpen(false)}
+          entry={entry}
+          currentContent={journalContent}
+          currentTitle={titleDraft}
+          onSchedule={onScheduleFutureMe}
+        />
+      )}
 
     </div>
   );

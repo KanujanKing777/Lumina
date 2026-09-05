@@ -67,6 +67,29 @@
         "updatedAt": { "type": "number", "description": "Update timestamp" }
       },
       "required": ["userId", "name", "createdAt"]
+    },
+    "FutureMeMessage": {
+      "title": "FutureMeMessage",
+      "description": "Scheduled time-capsule message to the user's future self with entry snapshot.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner UID" },
+        "sourceEntryId": { "type": "string", "description": "Original journal entry ID if applicable" },
+        "title": { "type": "string", "maxLength": 200, "description": "Message or entry title" },
+        "message": { "type": "string", "maxLength": 5000, "description": "Optional note to future self" },
+        "optionalFutureQuestion": { "type": "string", "maxLength": 1000, "description": "Optional question for future self" },
+        "scheduledFor": { "type": "number", "description": "Delivery timestamp in ms" },
+        "createdAt": { "type": "number", "description": "Creation timestamp in ms" },
+        "updatedAt": { "type": "number", "description": "Last update timestamp" },
+        "deliveredAt": { "type": "number", "description": "Timestamp when delivery became available" },
+        "openedAt": { "type": "number", "description": "Timestamp when user unsealed the message" },
+        "status": { "type": "string", "enum": ["scheduled", "delivered", "cancelled", "failed"], "description": "Delivery status" },
+        "notificationEnabled": { "type": "boolean", "description": "Whether user requested a delivery notification" },
+        "snapshot": { "type": "object", "description": "Preserved minimal journal entry snapshot" },
+        "reflectionResult": { "type": "string", "description": "Gemini AI reflection on past vs present" },
+        "reflectionModelUsed": { "type": "string", "description": "Model used for reflection" }
+      },
+      "required": ["userId", "title", "scheduledFor", "createdAt", "status", "snapshot"]
     }
   },
   "firestore": {
@@ -85,6 +108,10 @@
     "/users/{userId}/folders/{folderId}": {
       "schema": "Folder",
       "description": "User folders and collections."
+    },
+    "/users/{userId}/futureMe/{futureMeId}": {
+      "schema": "FutureMeMessage",
+      "description": "Scheduled time-capsule messages to future self."
     }
   }
 }

@@ -12,7 +12,8 @@ import {
   History,
   BarChart2,
   Plus,
-  X
+  X,
+  Hourglass
 } from 'lucide-react';
 import { NavigationSection } from '../types';
 
@@ -23,6 +24,8 @@ interface LeftSidebarProps {
   entriesCount: number;
   favoritesCount: number;
   foldersCount?: number;
+  futureMeUnopenedCount?: number;
+  futureMeTotalCount?: number;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
 }
@@ -34,6 +37,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   entriesCount,
   favoritesCount,
   foldersCount = 0,
+  futureMeUnopenedCount = 0,
+  futureMeTotalCount = 0,
   isMobileOpen,
   onCloseMobile,
 }) => {
@@ -58,6 +63,12 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           label: 'Collections',
           icon: Folder,
           badge: foldersCount > 0 ? foldersCount : undefined,
+        },
+        {
+          id: 'future_me' as NavigationSection,
+          label: 'Future Me',
+          icon: Hourglass,
+          badge: futureMeUnopenedCount > 0 ? `${futureMeUnopenedCount} new` : (futureMeTotalCount > 0 ? futureMeTotalCount : undefined),
         },
       ],
     },

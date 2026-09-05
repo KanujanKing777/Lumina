@@ -14,6 +14,11 @@ import {
   saveGoal,
   updateGoal,
   deleteGoal,
+  subscribeToUserFutureMe,
+  saveFutureMeMessage,
+  updateFutureMeMessage,
+  markFutureMeOpened,
+  deleteFutureMeMessage,
 } from '../firebase';
 import { 
   InteractionEntry, 
@@ -26,6 +31,8 @@ import {
   FolderItem,
   WritingGoal,
   JournalStatus,
+  FutureMeMessage,
+  FutureMeEntrySnapshot,
 } from '../types';
 import { LeftSidebar } from './LeftSidebar';
 import { JournalListPanel } from './JournalListPanel';
@@ -56,6 +63,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [entries, setEntries] = useState<InteractionEntry[]>([]);
   const [folders, setFolders] = useState<FolderItem[]>([]);
   const [goals, setGoals] = useState<WritingGoal[]>([]);
+  const [futureMeMessages, setFutureMeMessages] = useState<FutureMeMessage[]>([]);
   const [selectedFolderFilter, setSelectedFolderFilter] = useState<string>('all');
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [currentEntryDraft, setCurrentEntryDraft] = useState<InteractionEntry | null>(null);
@@ -122,6 +130,39 @@ export const Dashboard: React.FC<DashboardProps> = ({
       },
       (err) => {
         console.error('Failed to subscribe to goals:', err);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user.uid]);
+
+  // Subscribe to isolated Future Me collection for the authenticated user
+  useEffect(() => {
+    const unsubscribe = subscribeToUserFutureMe(
+      user.uid,
+      (fetched) => {
+        setFutureMeMessages(fetched);
+
+        // Check for delivered items that matured past their delivery timestamp
+        const now = Date.now();
+        fetched.forEach((msg) => {
+          if (msg.status === 'scheduled' && msg.scheduledFor <= now && msg.id) {
+            updateFutureMeMessage(user.uid, msg.id, {
+              status: 'delivered',
+              deliveredAt: now,
+            }).catch(console.error);
+
+            if (msg.notificationEnabled) {
+              setNotificationToast({
+                title: 'Letter from Future Me is ready!',
+                desc: `"${msg.title}" is ready to be opened.`,
+              });
+            }
+          }
+        });
+      },
+      (err) => {
+        console.error('Failed to subscribe to Future Me messages:', err);
       }
     );
 
@@ -239,6 +280,83 @@ export const Dashboard: React.FC<DashboardProps> = ({
     } catch (err: any) {
       console.error('Toggle favorite error:', err);
       setErrorNotification('Failed to update favorite status: ' + (err.message || 'Unknown error'));
+    }
+  };
+
+  // Future Me Handlers
+  const handleScheduleFutureMe = async (data: {
+    scheduledFor: number;
+    message: string;
+    optionalFutureQuestion: string;
+    notificationEnabled: boolean;
+    snapshot: FutureMeEntrySnapshot;
+  }) => {
+    try {
+      await saveFutureMeMessage(user.uid, {
+        sourceEntryId: currentEntryDraft?.id,
+        title: data.snapshot.title || 'Untitled Journal Entry',
+        message: data.message,
+        optionalFutureQuestion: data.optionalFutureQuestion,
+        scheduledFor: data.scheduledFor,
+        status: 'scheduled',
+        notificationEnabled: data.notificationEnabled,
+        snapshot: data.snapshot,
+        createdAt: Date.now(),
+      });
+
+      setNotificationToast({
+        title: 'Saved for Future Me!',
+        desc: `Your letter has been safely scheduled for ${new Date(data.scheduledFor).toLocaleDateString()}.`,
+      });
+    } catch (err: any) {
+      console.error('Failed to schedule Future Me message:', err);
+      setErrorNotification('Failed to schedule letter for Future Me: ' + (err.message || 'Unknown error'));
+      throw err;
+    }
+  };
+
+  const handleUpdateFutureMe = async (messageId: string, updates: Partial<FutureMeMessage>) => {
+    try {
+      await updateFutureMeMessage(user.uid, messageId, updates);
+      setNotificationToast({
+        title: 'Schedule updated',
+        desc: 'Your Future Me delivery details have been updated.',
+      });
+    } catch (err: any) {
+      console.error('Failed to update Future Me message:', err);
+      setErrorNotification('Failed to update message: ' + (err.message || 'Unknown error'));
+    }
+  };
+
+  const handleDeleteFutureMe = async (messageId: string) => {
+    try {
+      await deleteFutureMeMessage(user.uid, messageId);
+      setNotificationToast({
+        title: 'Message canceled',
+        desc: 'The scheduled Future Me message was canceled.',
+      });
+    } catch (err: any) {
+      console.error('Failed to delete Future Me message:', err);
+      setErrorNotification('Failed to remove message: ' + (err.message || 'Unknown error'));
+    }
+  };
+
+  const handleOpenFutureMe = async (messageId: string) => {
+    try {
+      await markFutureMeOpened(user.uid, messageId);
+    } catch (err: any) {
+      console.error('Failed to open Future Me message:', err);
+    }
+  };
+
+  const handleSaveFutureMeReflection = async (messageId: string, reflection: string, modelUsed: string) => {
+    try {
+      await updateFutureMeMessage(user.uid, messageId, {
+        reflectionResult: reflection,
+        reflectionModelUsed: modelUsed,
+      });
+    } catch (err: any) {
+      console.error('Failed to save reflection:', err);
     }
   };
 
@@ -546,6 +664,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const activeEffectiveSearch = searchQuery || panelSearchQuery;
 
   const favoritesCount = entries.filter((e) => e.isFavorite).length;
+  const now = Date.now();
+  const futureMeUnopenedCount = futureMeMessages.filter(
+    (m) => (m.scheduledFor <= now || m.status === 'delivered') && !m.openedAt
+  ).length;
+  const futureMeTotalCount = futureMeMessages.length;
 
   return (
     <div className="flex-1 flex flex-row w-full h-full min-h-0 overflow-hidden bg-stone-100 dark:bg-stone-950 transition-colors duration-150 relative select-none">
@@ -594,6 +717,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         entriesCount={entries.length}
         favoritesCount={favoritesCount}
         foldersCount={folders.length}
+        futureMeUnopenedCount={futureMeUnopenedCount}
+        futureMeTotalCount={futureMeTotalCount}
         isMobileOpen={isMobileNavOpen}
         onCloseMobile={onCloseMobileNav}
       />
@@ -638,6 +763,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               onToggleRightPanel={() => setIsRightPanelOpen((prev) => !prev)}
               isRightPanelOpen={isRightPanelOpen}
               onToggleFavorite={(id, curFav) => handleToggleFavorite(id, curFav)}
+              onScheduleFutureMe={handleScheduleFutureMe}
             />
           </div>
 
@@ -656,12 +782,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
             entries={entries}
             folders={folders}
             goals={goals}
+            futureMeMessages={futureMeMessages}
             onCreateFolder={handleCreateFolder}
             onRenameFolder={handleRenameFolder}
             onDeleteFolder={handleDeleteFolder}
             onCreateGoal={handleCreateGoal}
             onToggleGoal={handleToggleGoal}
             onDeleteGoal={handleDeleteGoal}
+            onUpdateFutureMe={handleUpdateFutureMe}
+            onDeleteFutureMe={handleDeleteFutureMe}
+            onOpenFutureMe={handleOpenFutureMe}
+            onSaveFutureMeReflection={handleSaveFutureMeReflection}
             onNewEntry={handleNewEntry}
             onNewEntryWithPrompt={handleNewEntryWithPrompt}
             onNewEntryInFolder={handleNewEntryInFolder}

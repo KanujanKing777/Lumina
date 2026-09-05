@@ -21,7 +21,7 @@ import {
   Firestore
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
-import { InteractionEntry, NotificationSettings, NotificationLogEntry, FolderItem, WritingGoal } from './types';
+import { InteractionEntry, NotificationSettings, NotificationLogEntry, FolderItem, WritingGoal, FutureMeMessage } from './types';
 
 // Initialize Firebase App singleton
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -452,6 +452,131 @@ export async function deleteGoal(
   const docRef = doc(db, 'users', userId, 'goals', goalId);
   await deleteDoc(docRef);
 }
+
+/**
+ * Listen to user Future Me messages in real-time
+ * Path: /users/{userId}/futureMe
+ */
+export function subscribeToUserFutureMe(
+  userId: string,
+  onUpdate: (messages: FutureMeMessage[]) => void,
+  onError?: (err: Error) => void
+): () => void {
+  if (!userId) {
+    onUpdate([]);
+    return () => {};
+  }
+
+  const futureMeRef = collection(db, 'users', userId, 'futureMe');
+  const q = query(futureMeRef, orderBy('scheduledFor', 'asc'));
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const items: FutureMeMessage[] = [];
+      const now = Date.now();
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data() as Omit<FutureMeMessage, 'id'>;
+        let effectiveStatus = data.status;
+        // If scheduled date has arrived and status is scheduled, treat as delivered
+        if (data.status === 'scheduled' && data.scheduledFor <= now) {
+          effectiveStatus = 'delivered';
+        }
+        items.push({
+          id: docSnap.id,
+          ...data,
+          status: effectiveStatus,
+        });
+      });
+      onUpdate(items);
+    },
+    (error) => {
+      console.error('Future Me subscription error:', error);
+      if (onError) onError(error);
+    }
+  );
+}
+
+/**
+ * Save a new Future Me message
+ * Preserves snapshot at scheduling time to guarantee historical integrity.
+ */
+export async function saveFutureMeMessage(
+  userId: string,
+  message: Omit<FutureMeMessage, 'id' | 'userId' | 'createdAt'> & { createdAt?: number }
+): Promise<string> {
+  if (!userId) throw new Error('User must be authenticated to schedule a Future Me message.');
+  
+  const now = Date.now();
+  if (message.scheduledFor <= now) {
+    throw new Error('Scheduled delivery date must be in the future.');
+  }
+
+  const futureMeRef = collection(db, 'users', userId, 'futureMe');
+
+  const payload = sanitizePayload({
+    ...message,
+    userId,
+    status: 'scheduled',
+    createdAt: message.createdAt || now,
+    updatedAt: now,
+  });
+
+  const docRef = await addDoc(futureMeRef, payload);
+  return docRef.id;
+}
+
+/**
+ * Update an existing Future Me message (e.g. reschedule or edit personal note)
+ */
+export async function updateFutureMeMessage(
+  userId: string,
+  messageId: string,
+  updates: Partial<FutureMeMessage>
+): Promise<void> {
+  if (!userId || !messageId) throw new Error('Valid userId and messageId are required.');
+  const docRef = doc(db, 'users', userId, 'futureMe', messageId);
+
+  const payload = sanitizePayload({
+    ...updates,
+    updatedAt: Date.now(),
+  });
+
+  await updateDoc(docRef, payload);
+}
+
+/**
+ * Mark a Future Me message as unsealed/opened
+ */
+export async function markFutureMeOpened(
+  userId: string,
+  messageId: string
+): Promise<void> {
+  if (!userId || !messageId) throw new Error('Valid userId and messageId are required.');
+  const docRef = doc(db, 'users', userId, 'futureMe', messageId);
+
+  const payload = sanitizePayload({
+    openedAt: Date.now(),
+    deliveredAt: Date.now(),
+    status: 'delivered',
+    updatedAt: Date.now(),
+  });
+
+  await updateDoc(docRef, payload);
+}
+
+/**
+ * Cancel or delete a Future Me message
+ */
+export async function deleteFutureMeMessage(
+  userId: string,
+  messageId: string
+): Promise<void> {
+  if (!userId || !messageId) throw new Error('Valid userId and messageId are required.');
+  const docRef = doc(db, 'users', userId, 'futureMe', messageId);
+  await deleteDoc(docRef);
+}
+
 
 
 
