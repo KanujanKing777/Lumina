@@ -25,6 +25,7 @@ import {
   NavigationSection,
   FolderItem,
   WritingGoal,
+  JournalStatus,
 } from '../types';
 import { LeftSidebar } from './LeftSidebar';
 import { JournalListPanel } from './JournalListPanel';
@@ -251,7 +252,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         setSaveStatus('saved');
       } else {
         // Create initial entry with current updates
-        const newId = await saveInteraction(user.uid, {
+        const newEntryData = {
           title: updates.title || 'Untitled Journal Entry',
           mode: updates.mode || 'reflect',
           initialPrompt: updates.journalContent || updates.title || 'Journal Entry',
@@ -261,14 +262,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
           emotionTags: updates.emotionTags || [],
           media: updates.media || [],
           journalDate: updates.journalDate || Date.now(),
-          status: updates.status || 'draft',
+          status: updates.status || ('draft' as JournalStatus),
           isFavorite: updates.isFavorite || false,
           folderId: updates.folderId,
           messages: [],
           createdAt: Date.now(),
           updatedAt: Date.now(),
-        });
+        };
+        const newId = await saveInteraction(user.uid, newEntryData);
+        const fullEntry: InteractionEntry = {
+          id: newId,
+          userId: user.uid,
+          ...newEntryData,
+        };
         setSelectedEntryId(newId);
+        setCurrentEntryDraft(fullEntry);
+        setEntries((prev) => [fullEntry, ...prev.filter((e) => e.id !== newId)]);
         setSaveStatus('saved');
       }
     } catch (err: any) {
@@ -309,6 +318,40 @@ export const Dashboard: React.FC<DashboardProps> = ({
       title = sourceForTitle.length > 40 ? `${sourceForTitle.substring(0, 40)}...` : sourceForTitle;
     }
 
+    // Optimistically update current draft so user prompt appears immediately
+    setCurrentEntryDraft((prev) => {
+      if (prev) {
+        return {
+          ...prev,
+          title: title || prev.title,
+          mode,
+          journalContent: journalContent !== undefined ? journalContent : prev.journalContent,
+          mood: mood !== undefined ? mood : prev.mood,
+          moodIntensity: moodIntensity !== undefined ? moodIntensity : prev.moodIntensity,
+          emotionTags: emotionTags !== undefined ? emotionTags : prev.emotionTags,
+          messages: updatedMessages,
+        };
+      }
+      return {
+        id: '',
+        userId: user.uid,
+        title: title || 'New Journal Entry',
+        mode,
+        initialPrompt: promptText || journalContent || 'Initial Entry',
+        journalContent: journalContent || '',
+        mood,
+        moodIntensity,
+        emotionTags: emotionTags || [],
+        media: [],
+        journalDate: Date.now(),
+        status: 'draft',
+        isFavorite: false,
+        messages: updatedMessages,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+    });
+
     try {
       // 1. Call secure Express backend proxy for Gemini 3.6 Flash
       const response = await fetch('/api/gemini/reflect', {
@@ -336,29 +379,36 @@ export const Dashboard: React.FC<DashboardProps> = ({
         role: 'model',
         content: data.reply,
         timestamp: Date.now(),
+        modelUsed: data.modelUsed,
+        isFallback: data.isFallback,
       };
 
       const finalMessages = [...updatedMessages, modelMessage];
       const detectedEvents: DetectedJournalEvent[] = data.detectedEvents || [];
 
-      // 2. Persist directly to isolated Firestore collection
+      // 2. Persist directly to isolated Firestore collection & update local state immediately
       let savedInteractionId = selectedEntryId;
       if (selectedEntryId) {
-        await updateInteraction(user.uid, selectedEntryId, {
+        const updatePayload = {
           title,
           mode,
-          journalContent,
+          journalContent: journalContent !== undefined ? journalContent : (currentEntryDraft?.journalContent || ''),
           mood,
           moodIntensity,
-          emotionTags,
+          emotionTags: emotionTags || [],
           messages: finalMessages,
           detectedEvents,
           modelUsed: data.modelUsed,
-          status: 'saved',
-        });
+          status: 'saved' as JournalStatus,
+        };
+        await updateInteraction(user.uid, selectedEntryId, updatePayload);
+        setCurrentEntryDraft((prev) => (prev ? { ...prev, ...updatePayload, updatedAt: Date.now() } : null));
+        setEntries((prev) =>
+          prev.map((e) => (e.id === selectedEntryId ? { ...e, ...updatePayload, updatedAt: Date.now() } : e))
+        );
         setSaveStatus('saved');
       } else {
-        const newId = await saveInteraction(user.uid, {
+        const newEntryData = {
           title,
           mode,
           initialPrompt: promptText || journalContent || 'Initial Entry',
@@ -368,15 +418,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
           emotionTags: emotionTags || [],
           media: currentEntryDraft?.media || [],
           journalDate: currentEntryDraft?.journalDate || Date.now(),
-          status: 'saved',
+          status: 'saved' as JournalStatus,
           isFavorite: currentEntryDraft?.isFavorite || false,
           messages: finalMessages,
           detectedEvents,
           modelUsed: data.modelUsed,
           createdAt: Date.now(),
           updatedAt: Date.now(),
-        });
+        };
+        const newId = await saveInteraction(user.uid, newEntryData);
+        const fullEntry: InteractionEntry = {
+          id: newId,
+          userId: user.uid,
+          ...newEntryData,
+        };
         setSelectedEntryId(newId);
+        setCurrentEntryDraft(fullEntry);
+        setEntries((prev) => [fullEntry, ...prev.filter((e) => e.id !== newId)]);
         savedInteractionId = newId;
         setSaveStatus('saved');
       }
@@ -437,6 +495,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       setErrorNotification(
         err.message || 'An error occurred during Gemini reflection. Your prompt remains intact.'
       );
+      setCurrentEntryDraft((prev) => (prev ? { ...prev, messages: existingMessages } : null));
     } finally {
       setIsGenerating(false);
     }

@@ -2,8 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { User } from 'firebase/auth';
 import { 
   Settings, 
-  Moon, 
-  Sun, 
+  Palette, 
   Bell, 
   ShieldCheck, 
   LogOut, 
@@ -208,8 +207,8 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
                 className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-100/80 dark:hover:bg-stone-800/70 transition-colors group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 flex items-center justify-center shrink-0">
-                    {isDark ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                  <div className="w-8 h-8 rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 flex items-center justify-center shrink-0">
+                    <Palette className="w-4 h-4" />
                   </div>
                   <div className="text-left">
                     <div className="text-xs font-semibold text-stone-900 dark:text-stone-100">
@@ -235,16 +234,10 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
                   <span className="sr-only">Toggle theme</span>
                   <span
                     aria-hidden="true"
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out flex items-center justify-center ${
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
                       isDark ? 'translate-x-5' : 'translate-x-0'
                     }`}
-                  >
-                    {isDark ? (
-                      <Moon className="w-3 h-3 text-amber-600" />
-                    ) : (
-                      <Sun className="w-3 h-3 text-amber-500" />
-                    )}
-                  </span>
+                  />
                 </button>
               </div>
 

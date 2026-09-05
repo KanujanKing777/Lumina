@@ -420,6 +420,11 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
   const messages = entry?.messages || [];
   const entryStatus: JournalStatus = entry?.status || 'draft';
 
+  // Auto-scroll to bottom of conversation whenever messages update or generation starts
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages.length, isGenerating]);
+
   return (
     <div className="flex-1 min-w-0 h-full min-h-0 flex flex-col bg-white dark:bg-stone-900 overflow-hidden transition-colors duration-150 relative">
       
@@ -815,6 +820,27 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
             </span>
           </div>
 
+          {(messages.some((m) => m.modelUsed === 'local-heuristic-companion' || m.isFallback) || entry?.modelUsed === 'local-heuristic-companion') && (
+            <div className="p-3 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div className="font-semibold text-amber-950 dark:text-amber-100 flex items-center gap-2">
+                  <span>Adaptive Reflection Mode Active</span>
+                  <span className="text-[10px] bg-amber-200/60 dark:bg-amber-900/60 px-1.5 py-0.2 rounded font-normal text-amber-800 dark:text-amber-300">
+                    HTTP 429 Notice
+                  </span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-amber-900/80 dark:text-amber-300/90">
+                  Your Google AI Studio API key has depleted prepayment credits. The built-in semantic reflection engine is currently generating context-aware reflections directly from your prompt and journal text. Once credits are replenished at{' '}
+                  <a href="https://ai.studio/projects" target="_blank" rel="noreferrer" className="underline font-medium hover:text-amber-950 dark:hover:text-amber-100">
+                    ai.studio/projects
+                  </a>
+                  , queries will automatically resume through Gemini 3.6 Flash.
+                </p>
+              </div>
+            </div>
+          )}
+
           {messages.length === 0 ? (
             <div className="p-6 rounded-2xl bg-stone-50/60 dark:bg-stone-800/40 border border-dashed border-stone-200 dark:border-stone-800 text-center space-y-2">
               <Compass className="w-6 h-6 text-amber-600 mx-auto" />
@@ -857,7 +883,18 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
                   <div className={`flex flex-col space-y-1 ${isUser ? 'items-end' : 'items-start'}`}>
                     <div className="flex items-center gap-2 px-1">
                       <span className="text-[11px] font-semibold text-stone-700 dark:text-stone-400">
-                        {isUser ? (userDisplayName || 'You') : 'Gemini 3.6 Flash'}
+                        {isUser ? (
+                          userDisplayName || 'You'
+                        ) : msg.modelUsed === 'local-heuristic-companion' || msg.isFallback || entry?.modelUsed === 'local-heuristic-companion' ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <span>Reflection Companion</span>
+                            <span className="text-[9px] font-normal px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40">
+                              Built-in
+                            </span>
+                          </span>
+                        ) : (
+                          <span>{msg.modelUsed || entry?.modelUsed || 'Gemini 3.6 Flash'}</span>
+                        )}
                       </span>
                       <span className="text-[10px] text-stone-500 dark:text-stone-400">
                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

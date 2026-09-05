@@ -53,15 +53,15 @@ interface FallbackResult {
 }
 
 // Track prepayment depletion state to avoid quota spam and excessive network requests
-let creditDepletedUntil: number = Date.now() + 5 * 60 * 1000;
+let creditDepletedUntil: number = 0;
 
 function isPrepaymentDepleted(): boolean {
   return Date.now() < creditDepletedUntil;
 }
 
 function markPrepaymentDepleted(): void {
-  // Cooldown for 5 minutes before attempting remote API again
-  creditDepletedUntil = Date.now() + 5 * 60 * 1000;
+  // Cooldown for 30 seconds before attempting remote API again
+  creditDepletedUntil = Date.now() + 30 * 1000;
 }
 
 /**
@@ -176,7 +176,7 @@ async function generateContentWithFallback(
 }
 
 /**
- * Heuristic Local Reflection Companion (Used when Gemini is offline or credits depleted)
+ * Dynamic Semantic Reflection Engine (Adaptive local companion when remote Gemini API credits are depleted)
  */
 function generateHeuristicReflection(
   prompt: string,
@@ -186,32 +186,136 @@ function generateHeuristicReflection(
   emotionTags?: string[],
   mode: string = 'reflect'
 ): string {
-  const text = `${prompt} ${journalContent}`.trim();
+  const combinedText = `${prompt} ${journalContent}`.trim();
+  const lowerText = combinedText.toLowerCase();
+
+  // 1. Detect question / core inquiry
+  const questions: string[] = [];
+  const questionMatches = prompt.match(/[^.!?\n]+(?:\?)/g);
+  if (questionMatches) {
+    questions.push(...questionMatches.map((q) => q.trim()));
+  }
+
+  // 2. Identify key topics from vocabulary
+  const topics: string[] = [];
+  if (/\b(job|work|boss|career|project|deadline|busy|productive|office|client|meeting|tasks)\b/.test(lowerText)) {
+    topics.push('work_career');
+  }
+  if (/\b(tired|exhausted|burnout|drained|overwhelmed|stress|pressure|anxious|anxiety|panic)\b/.test(lowerText)) {
+    topics.push('stress_exhaustion');
+  }
+  if (/\b(friend|relationship|partner|family|mom|dad|husband|wife|brother|sister|colleague|boundary|conflict)\b/.test(lowerText)) {
+    topics.push('relationships');
+  }
+  if (/\b(balance|time|schedule|routine|habit|sleep|morning|evening|rest|slow down)\b/.test(lowerText)) {
+    topics.push('balance_wellness');
+  }
+  if (/\b(decide|decision|choice|choose|stuck|future|path|crossroad|direction|confused|doubt)\b/.test(lowerText)) {
+    topics.push('decisions_direction');
+  }
+  if (/\b(happy|grateful|gratitude|joy|blessed|thankful|proud|peace|peaceful|calm|content)\b/.test(lowerText)) {
+    topics.push('gratitude_joy');
+  }
+  if (/\b(grow|growth|learn|learning|improve|better|habit|progress|evolve)\b/.test(lowerText)) {
+    topics.push('growth_learning');
+  }
+
+  // 3. Formulate mood & emotional presence summary
   const moodDesc = mood ? `feeling **${mood}**${moodIntensity ? ` (intensity ${moodIntensity}/10)` : ''}` : '';
   const tagsDesc = emotionTags && emotionTags.length > 0 ? `around ${emotionTags.map((t) => '#' + t).join(' ')}` : '';
-
-  let contextSummary = '';
+  let contextLead = '';
   if (moodDesc || tagsDesc) {
-    contextSummary = `I notice you checked in ${[moodDesc, tagsDesc].filter(Boolean).join(' ')}. `;
+    contextLead = `I hear the emotional backdrop you are bringing to this—holding space for ${[moodDesc, tagsDesc].filter(Boolean).join(' ')}. `;
   }
 
-  let modeSpecificPerspective = '';
-  if (mode === 'brainstorm') {
-    modeSpecificPerspective = `\n\n### Creative Exploration\n- **Alternative Angle:** What if this situation is presenting an unexpected invitation to redefine your priorities?\n- **Divergent Path:** If there were no expectations or constraints, what instinct would you follow next?\n- **Micro-Experiment:** What small, low-risk experiment could test a fresh direction tomorrow?`;
-  } else if (mode === 'summarize') {
-    modeSpecificPerspective = `\n\n### Core Synthesis\n- **Central Theme:** A dedicated reflection on navigating current thoughts and honoring your inner experiences.\n- **Key Takeaway:** By giving words to this, you are actively bringing awareness and clarity to what matters most right now.`;
-  } else if (mode === 'action_plan') {
-    modeSpecificPerspective = `\n\n### Pragmatic Next Steps\n1. **Acknowledge and Center:** Take five quiet minutes to absorb what you have expressed here without rushing to fix everything.\n2. **Identify One Actionable Lever:** Focus on the single aspect of this that lies directly within your control.\n3. **Gentle Boundary:** Give yourself permission to pause on unresolved questions until you have more clarity.`;
+  // 4. Topic-specific deep reflections
+  const topicInsights: string[] = [];
+  if (topics.includes('work_career')) {
+    topicInsights.push(
+      `In demanding seasons of work and responsibility, it is easy for external urgencies to crowd out internal needs. Notice whether the pressure you are feeling is self-imposed or externally driven, and identify where you can reclaim agency over your attention.`
+    );
+  }
+  if (topics.includes('stress_exhaustion')) {
+    topicInsights.push(
+      `Exhaustion is your body and nervous system's honest feedback. When our energy is depleted, clarity suffers. Give yourself permission to prioritize restoration before trying to solve every unresolved puzzle.`
+    );
+  }
+  if (topics.includes('relationships')) {
+    topicInsights.push(
+      `Interpersonal dynamics often mirror our unspoken boundaries and needs. Giving voice to your authentic experience—first to yourself on the page, and then clearly to others—is how mutual trust and peace are maintained.`
+    );
+  }
+  if (topics.includes('balance_wellness')) {
+    topicInsights.push(
+      `Balance is rarely a static 50/50 split; it is dynamic and rhythmic, like breathing in and breathing out. When one area requires intense focus, balance means intentionally building in tiny micro-pauses rather than expecting perfection.`
+    );
+  }
+  if (topics.includes('decisions_direction')) {
+    topicInsights.push(
+      `When facing difficult choices, hesitation often stems from wanting guaranteed certainty before moving. Remember that clarity rarely precedes action; it usually emerges through taking small, reversible steps.`
+    );
+  }
+  if (topics.includes('gratitude_joy')) {
+    topicInsights.push(
+      `Savoring these positive moments strengthens emotional resilience. Take a moment to anchor this feeling deeply, noticing how grounding it is to celebrate what is working well.`
+    );
+  }
+  if (topics.includes('growth_learning')) {
+    topicInsights.push(
+      `Growth is rarely linear. The discomfort or friction you describe is often the exact threshold where new understanding and resilience take root.`
+    );
+  }
+
+  // 5. Build prompt-specific core answer
+  let directAnswer = '';
+  if (prompt && prompt.trim()) {
+    const trimmedPrompt = prompt.trim();
+    if (questions.length > 0) {
+      directAnswer = `### Contemplating Your Question: *"${questions[0]}"*\n${contextLead}${
+        topicInsights.length > 0
+          ? topicInsights[0]
+          : 'When wrestling with this inquiry, notice the underlying expectation or concern beneath the question itself.'
+      }\n\nWhat stands out in what you have shared is the desire for authentic alignment. Rather than searching for an absolute or perfect solution right away, explore what a compassionate next step looks like for you in this exact situation.`;
+    } else {
+      directAnswer = `### Reflecting on: *"${trimmedPrompt}"*\n${contextLead}${
+        topicInsights.length > 0
+          ? topicInsights[0]
+          : 'Putting words to your lived experience is the foundation for self-discovery and inner clarity.'
+      }\n\nNotice the themes running through your words: you are actively processing your environment and making conscious choices about how to show up for yourself.`;
+    }
   } else {
-    modeSpecificPerspective = `\n\n### Contemplative Insight\nWriting these thoughts down is a meaningful act of self-honesty. Often the feelings and situations we describe carry layered intentions—a desire for peace, growth, or deeper alignment with what you value.`;
+    directAnswer = `### Journal Synthesis\n${contextLead}${
+      topicInsights.length > 0
+        ? topicInsights.join('\n\n')
+        : 'Your reflections demonstrate deep self-awareness and honesty. Honoring these thoughts on the page gives them the space they deserve.'
+    }`;
   }
 
-  return `Thank you for sharing your reflection. ${contextSummary}
-${modeSpecificPerspective}
+  // 6. Mode-specific framing
+  let modeSection = '';
+  if (mode === 'brainstorm') {
+    modeSection = `\n\n### Creative Perspectives & Angles
+1. **The Inversion Principle:** If you did the exact opposite of what you usually do in this situation, what might happen?
+2. **The 10/10/10 Perspective:** How will this feel in 10 minutes, 10 months, and 10 years from now?
+3. **The Unburdened Choice:** If you were guaranteed that you could not disappoint anyone, what choice would you make?`;
+  } else if (mode === 'action_plan') {
+    modeSection = `\n\n### Actionable Micro-Steps
+1. **Define the Immediate Next Step:** Identify the single smallest action (under 5 minutes) that moves this forward or brings relief.
+2. **Protect Your Margin:** Clear or postpone one non-critical commitment this week to create breathing room.
+3. **Establish a Check-in Anchor:** Schedule a 2-minute moment tomorrow to assess how you are feeling after today's reflections.`;
+  } else if (mode === 'summarize') {
+    modeSection = `\n\n### Essential Synthesis
+- **Core Observation:** You are navigating meaningful choices around ${topics.length > 0 ? topics.join(' and ') : 'your daily experiences and priorities'}.
+- **Primary Strength:** Your willingness to inspect your thoughts honestly provides a clear compass for your next steps.`;
+  } else {
+    modeSection = `\n\n### Guided Inquiries
+- *What is the most loving or courageous thing you could do for yourself regarding this today?*
+- *If you trusted that everything will work out, what weight could you put down right now?*`;
+  }
 
-### Reflection Anchors
-- *What is the most honest truth your heart or mind wants you to pay attention to right now?*
-- *What would bring a sense of ease or closure to this moment?*`;
+  const notice = `\n\n> ℹ️ **Notice:** *Generated by the Local Reflection Engine. (Google AI Studio returned HTTP 429: Prepayment credits depleted on your project API key. Responses will automatically switch back to Gemini 3.6 Flash once credits are replenished at [ai.studio/projects](https://ai.studio/projects)).*`;
+
+  return `${directAnswer}${modeSection}${notice}`;
 }
 
 /**
@@ -1132,6 +1236,8 @@ Guidelines:
 
     let text: string;
     let modelUsed: string;
+    let isFallback = false;
+    let fallbackReason: string | undefined = undefined;
 
     if (isPrepaymentDepleted()) {
       text = generateHeuristicReflection(
@@ -1143,11 +1249,14 @@ Guidelines:
         mode
       );
       modelUsed = 'local-heuristic-companion';
+      isFallback = true;
+      fallbackReason = 'Prepayment credits depleted on Google AI Studio project (HTTP 429)';
     } else {
       try {
         const result = await generateContentWithFallback(systemInstruction, contents);
         text = result.text;
         modelUsed = result.modelUsed;
+        isFallback = false;
       } catch (genErr: any) {
         const cleanMsg = extractCleanErrorMessage(genErr);
         console.log(`[Gemini Routing /api/gemini/reflect] Utilizing local heuristic companion: ${cleanMsg}`);
@@ -1160,6 +1269,8 @@ Guidelines:
           mode
         );
         modelUsed = 'local-heuristic-companion';
+        isFallback = true;
+        fallbackReason = cleanMsg;
       }
     }
 
@@ -1170,6 +1281,8 @@ Guidelines:
       success: true,
       reply: text,
       modelUsed,
+      isFallback,
+      fallbackReason,
       detectedEvents,
     });
   } catch (error: any) {

@@ -40,6 +40,8 @@ export interface ChatMessage {
   role: 'user' | 'model';
   content: string;
   timestamp: number;
+  modelUsed?: string;
+  isFallback?: boolean;
 }
 
 export type NotificationEventType =
